@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { AuthLayout, Field, FormMessage, PrimaryButton, TextButton } from '../../components/AuthLayout';
 import { loginUser } from '../../store/auth/authActions';
@@ -54,15 +54,6 @@ export default function LoginScreen({ navigation, onAuthenticated }) {
       </View>
       <FormMessage>{message}</FormMessage>
       <PrimaryButton title={isSubmitting ? 'Signing in...' : 'Sign in'} onPress={handleLogin} disabled={isSubmitting} />
-      <View style={styles.dividerRow}>
-        <View style={styles.divider} />
-        <Text style={styles.dividerText}>or continue with</Text>
-        <View style={styles.divider} />
-      </View>
-      <Pressable style={({ pressed }) => [styles.googleButton, pressed && styles.googleButtonPressed]}>
-        <Text style={styles.googleMark}>G</Text>
-        <Text style={styles.googleButtonText}>Sign in with Google</Text>
-      </Pressable>
     </AuthLayout>
   );
 }
@@ -84,42 +75,5 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: colors.textMuted,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
-  googleButton: {
-    height: 46,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 10,
-    backgroundColor: colors.white,
-  },
-  googleButtonPressed: {
-    opacity: 0.75,
-  },
-  googleMark: {
-    color: '#4285F4',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  googleButtonText: {
-    color: colors.textPrimary,
-    fontWeight: '800',
   },
 });

@@ -1,4 +1,5 @@
 import { createStackNavigator } from '@react-navigation/stack';
+import { StyleSheet } from 'react-native';
 
 const Stack = createStackNavigator();
 
@@ -16,9 +17,14 @@ export default function MainNavigator({ userDetails, appMetadata, onSignOut }) {
   const CreateTeamScreen = require('../screens/teams/CreateTeamScreen').default;
   const TeamDetailScreen = require('../screens/teams/TeamDetailScreen').default;
   const TeamInvitationsScreen = require('../screens/teamInvitations/TeamInvitationsScreen').default;
+  const ProfileScreen = require('../screens/profile/ProfileScreen').default;
+  const ProductsScreen = require('../screens/products/ProductsScreen').default;
+  const ProductDetailScreen = require('../screens/products/ProductDetailScreen').default;
+  const ProductFormScreen = require('../screens/products/ProductFormScreen').default;
+  const ProductBulkImportScreen = require('../screens/products/ProductBulkImportScreen').default;
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: styles.card }}>
       <Stack.Screen name="Home" options={{ title: 'AeroPlan' }}>
         {(props) => (
           <HomeScreen
@@ -29,9 +35,36 @@ export default function MainNavigator({ userDetails, appMetadata, onSignOut }) {
           />
         )}
       </Stack.Screen>
-      <Stack.Screen name="Accounts" component={AccountsScreen} />
-      <Stack.Screen name="AccountDetail" component={AccountDetailScreen} options={{ title: 'Account Detail' }} />
-      <Stack.Screen name="AccountForm" component={AccountFormScreen} options={{ title: 'Account Form' }} />
+      <Stack.Screen name="Accounts">
+        {(props) => (
+          <AccountsScreen
+            {...props}
+            userDetails={userDetails}
+            appMetadata={appMetadata}
+            onSignOut={onSignOut}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="AccountDetail">
+        {(props) => (
+          <AccountDetailScreen
+            {...props}
+            userDetails={userDetails}
+            appMetadata={appMetadata}
+            onSignOut={onSignOut}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="AccountForm">
+        {(props) => (
+          <AccountFormScreen
+            {...props}
+            userDetails={userDetails}
+            appMetadata={appMetadata}
+            onSignOut={onSignOut}
+          />
+        )}
+      </Stack.Screen>
       <Stack.Screen name="Placeholder" component={PlaceholderScreen} />
       <Stack.Screen name="Lines">
         {(props) => (
@@ -103,6 +136,60 @@ export default function MainNavigator({ userDetails, appMetadata, onSignOut }) {
           />
         )}
       </Stack.Screen>
+      <Stack.Screen name="Profile">
+        {(props) => (
+          <ProfileScreen
+            {...props}
+            userDetails={userDetails}
+            appMetadata={appMetadata}
+            onSignOut={onSignOut}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="Products">
+        {(props) => (
+          <ProductsScreen
+            {...props}
+            userDetails={userDetails}
+            appMetadata={appMetadata}
+            onSignOut={onSignOut}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="ProductDetail">
+        {(props) => (
+          <ProductDetailScreen
+            {...props}
+            userDetails={userDetails}
+            appMetadata={appMetadata}
+            onSignOut={onSignOut}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="ProductForm">
+        {(props) => (
+          <ProductFormScreen
+            {...props}
+            userDetails={userDetails}
+            appMetadata={appMetadata}
+            onSignOut={onSignOut}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="ProductBulkImport">
+        {(props) => (
+          <ProductBulkImportScreen
+            {...props}
+            userDetails={userDetails}
+            appMetadata={appMetadata}
+            onSignOut={onSignOut}
+          />
+        )}
+      </Stack.Screen>
     </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  card: { flex: 1, minHeight: 0 },
+});

@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiRequest } from '../apiClient';
 
 export const USER_DETAILS_STORAGE_KEY = 'aeroplan:userDetails';
@@ -91,15 +92,15 @@ export const updateUserProfile = async (token, profile) => {
 };
 
 export const saveUserDetails = async (payload) => {
-  localStorage.setItem(USER_DETAILS_STORAGE_KEY, JSON.stringify(payload));
+  await AsyncStorage.setItem(USER_DETAILS_STORAGE_KEY, JSON.stringify(payload));
   return payload;
 };
 
 export const getSavedUserDetails = async () => {
-  const savedUser = localStorage.getItem(USER_DETAILS_STORAGE_KEY);
-  return savedUser ? JSON.parse(savedUser) : null;
+  const saved = await AsyncStorage.getItem(USER_DETAILS_STORAGE_KEY);
+  return saved ? JSON.parse(saved) : null;
 };
 
 export const clearUserDetails = async () => {
-  localStorage.removeItem(USER_DETAILS_STORAGE_KEY);
+  await AsyncStorage.removeItem(USER_DETAILS_STORAGE_KEY);
 };

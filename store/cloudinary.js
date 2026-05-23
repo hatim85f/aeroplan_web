@@ -33,3 +33,4 @@ async function uploadToCloudinary(uri, folder) {
 export const uploadTeamLogo = (uri) => uploadToCloudinary(uri, 'aeroplan/team-logos');
 export const uploadLineLogo = (uri) => uploadToCloudinary(uri, 'aeroplan/line-logos');
 export const uploadProfilePicture = (uri) => uploadToCloudinary(uri, 'aeroplan/profile');
+export const uploadProductImage = (uri) => uploadToCloudinary(uri, 'aeroplan/products');

@@ -36,13 +36,14 @@ export default function AppNavigator() {
         if (token) {
           try {
             const user = await getCurrentUser(token);
-            setUserDetails({ ...savedUserDetails, token, user });
+            const merged = { ...savedUserDetails, token, user };
+            await saveUserDetails(merged);
+            setUserDetails(merged);
           } catch {
-            await clearUserDetails();
-            setUserDetails(null);
+            // Network failure — keep saved session, show cached data
+            setUserDetails({ ...savedUserDetails, token });
           }
         } else {
-          // No token found — force re-login
           await clearUserDetails();
           setUserDetails(null);
         }
@@ -75,21 +76,24 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
-      {userDetails ? (
-        <MainNavigator
-          userDetails={userDetails}
-          appMetadata={appMetadata}
-          onSignOut={handleSignOut}
-        />
-      ) : (
-        <AuthNavigator appMetadata={appMetadata} onAuthenticated={handleAuthenticated} />
-      )}
-    </NavigationContainer>
+    <View style={styles.root}>
+      <NavigationContainer>
+        {userDetails ? (
+          <MainNavigator
+            userDetails={userDetails}
+            appMetadata={appMetadata}
+            onSignOut={handleSignOut}
+          />
+        ) : (
+          <AuthNavigator appMetadata={appMetadata} onAuthenticated={handleAuthenticated} />
+        )}
+      </NavigationContainer>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   loading: {
     flex: 1,
     alignItems: 'center',
