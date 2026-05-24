@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"d:\\\\\\\\Plans\\\\\\\\aeroplanweb\")",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

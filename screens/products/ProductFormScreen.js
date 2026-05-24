@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
@@ -8,20 +8,26 @@ import AppShell from '../../components/AppShell';
 import { colors } from '../../constants/colors';
 import { globalHeight, globalWidth } from '../../constants/globalWidth';
 import { getProductById, createProduct, updateProduct } from '../../store/products/productActions';
+import { listSalesChannels } from '../../store/salesChannels/salesChannelActions';
 import { getLines } from '../../store/lines/linesActions';
 import { uploadProductImage } from '../../store/cloudinary';
 
-const CHANNELS = ['direct', 'upp', 'institutional'];
-const CHANNEL_LABELS = { direct: 'Direct', upp: 'UPP', institutional: 'Institutional' };
-const CHANNEL_COLORS = {
-  direct:        { accent: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
-  upp:           { accent: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
-  institutional: { accent: '#C2410C', bg: '#FFF7ED', border: '#FED7AA' },
-};
+/* ─── Color palette for dynamic channels ──────────────────────────────────── */
+const ACCENT_PALETTE = [
+  { accent: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+  { accent: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
+  { accent: '#C2410C', bg: '#FFF7ED', border: '#FED7AA' },
+  { accent: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE' },
+  { accent: '#0E7490', bg: '#ECFEFF', border: '#A5F3FC' },
+  { accent: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
+];
+const paletteFor = (idx) => ACCENT_PALETTE[idx % ACCENT_PALETTE.length];
 
-const emptyPrices = () => ({ cifUsd: '', wholesaleAed: '', retailAed: '' });
-const emptyFoc = () => ({ percentage: '' });
+const emptyChannelPricing = () => ({
+  cifUsd: '', wholesaleAed: '', retailAed: '', defaultFocPercentage: '', focNotes: '',
+});
 
+/* ─── Helpers ───────────────────────────────────────────────────────────── */
 function Field({ label, required, error, hint, children, style }) {
   return (
     <View style={[styles.field, style]}>
@@ -95,62 +101,80 @@ function StatusToggle({ value, onChange }) {
   );
 }
 
-function PricingSection({ channel, label, prices, foc, onPricesChange, onFocChange }) {
-  const [open, setOpen] = useState(false);
-  const c = CHANNEL_COLORS[channel];
-
-  const priceFields = [
-    { key: 'cifUsd',       label: 'CIF USD', placeholder: '0.00' },
-    { key: 'wholesaleAed', label: 'WS AED',  placeholder: '0.00' },
-    { key: 'retailAed',    label: 'RP AED',  placeholder: '0.00' },
-  ];
+/* ─── Dynamic channel pricing section ─────────────────────────────────────── */
+function ChannelPricingSection({ channel, color, pricing, onChange }) {
+  const [open, setOpen] = useState(true);
+  const update = (key) => (val) => onChange({ ...pricing, [key]: val });
 
   return (
-    <View style={[styles.pricingSection, { borderColor: c.border }]}>
-      <Pressable style={[styles.pricingSectionHeader, { backgroundColor: c.bg }]} onPress={() => setOpen((v) => !v)}>
-        <Text style={[styles.pricingSectionLabel, { color: c.accent }]}>{label}</Text>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={15} color={c.accent} />
+    <View style={[styles.pricingSection, { borderColor: color.border }]}>
+      <Pressable
+        style={[styles.pricingSectionHeader, { backgroundColor: color.bg }]}
+        onPress={() => setOpen((v) => !v)}
+      >
+        <Text style={[styles.pricingSectionLabel, { color: color.accent }]}>
+          {channel.channelName}
+        </Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={15} color={color.accent} />
       </Pressable>
       {open && (
         <View style={styles.pricingSectionBody}>
           <View style={styles.priceGrid}>
-            {priceFields.map(({ key, label: pLabel, placeholder }) => (
+            {[
+              { key: 'cifUsd',       label: 'CIF USD' },
+              { key: 'wholesaleAed', label: 'WS AED'  },
+              { key: 'retailAed',    label: 'RP AED'  },
+            ].map(({ key, label }) => (
               <View key={key} style={styles.priceFieldWrap}>
-                <Text style={styles.priceFieldLabel}>{pLabel}</Text>
+                <Text style={styles.priceFieldLabel}>{label}</Text>
                 <TextInput
                   style={styles.priceInput}
-                  value={prices?.[key] != null ? String(prices[key]) : ''}
-                  onChangeText={(v) => onPricesChange({ ...prices, [key]: v })}
-                  placeholder={placeholder}
+                  value={pricing?.[key] != null ? String(pricing[key]) : ''}
+                  onChangeText={update(key)}
+                  placeholder="0.00"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="decimal-pad"
                 />
               </View>
             ))}
           </View>
-          <View style={styles.focRow}>
-            <Text style={styles.priceFieldLabel}>Default FOC %</Text>
-            <TextInput
-              style={[styles.priceInput, { width: 120 }]}
-              value={foc?.percentage != null ? String(foc.percentage) : ''}
-              onChangeText={(v) => onFocChange({ ...foc, percentage: v })}
-              placeholder="0"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="decimal-pad"
-            />
-          </View>
+          {channel.focEnabled && (
+            <View style={styles.focRow}>
+              <View style={styles.priceFieldWrap}>
+                <Text style={styles.priceFieldLabel}>Default FOC %</Text>
+                <TextInput
+                  style={[styles.priceInput, { width: 110 }]}
+                  value={pricing?.defaultFocPercentage != null ? String(pricing.defaultFocPercentage) : ''}
+                  onChangeText={update('defaultFocPercentage')}
+                  placeholder="0"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={{ flex: 2 }}>
+                <Text style={styles.priceFieldLabel}>FOC Notes</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  value={pricing?.focNotes || ''}
+                  onChangeText={update('focNotes')}
+                  placeholder="Optional notes"
+                  placeholderTextColor={colors.textMuted}
+                />
+              </View>
+            </View>
+          )}
         </View>
       )}
     </View>
   );
 }
 
+/* ─── Main ──────────────────────────────────────────────────────────────── */
 export default function ProductFormScreen({ navigation, route, userDetails, appMetadata, onSignOut }) {
   const mode = route?.params?.mode || 'create';
   const productId = route?.params?.productId;
   const isEdit = mode === 'edit' && !!productId;
 
-  const user = userDetails?.user || userDetails?.data?.user || userDetails || {};
   const token = userDetails?.token || userDetails?.data?.token || '';
 
   const [loadingInit, setLoadingInit] = useState(isEdit);
@@ -159,8 +183,12 @@ export default function ProductFormScreen({ navigation, route, userDetails, appM
   const [saveError, setSaveError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
   const [lines, setLines] = useState([]);
+  const [channels, setChannels] = useState([]);
+  const [loadingChannels, setLoadingChannels] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
 
+  /* form state */
   const [form, setForm] = useState({
     productName: '',
     productNickname: '',
@@ -168,29 +196,48 @@ export default function ProductFormScreen({ navigation, route, userDetails, appM
     imageUrl: '',
     lineId: '',
     status: 'active',
-    prices: {
-      direct: emptyPrices(),
-      upp: emptyPrices(),
-      institutional: emptyPrices(),
-    },
-    defaultFoc: {
-      direct: emptyFoc(),
-      upp: emptyFoc(),
-      institutional: emptyFoc(),
-    },
   });
   const [errors, setErrors] = useState({});
 
-  const set = (key) => (val) => setForm((f) => ({ ...f, [key]: val }));
-  const setPrices = (ch) => (val) => setForm((f) => ({ ...f, prices: { ...f.prices, [ch]: val } }));
-  const setFoc = (ch) => (val) => setForm((f) => ({ ...f, defaultFoc: { ...f.defaultFoc, [ch]: val } }));
+  /* channel selections */
+  const [selectedChannelIds, setSelectedChannelIds] = useState(new Set());
+  const [channelPricing, setChannelPricing] = useState({});  // { [id]: emptyChannelPricing() }
 
+  const set = (key) => (val) => setForm((f) => ({ ...f, [key]: val }));
+
+  const toggleChannel = (id) => {
+    setSelectedChannelIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      return next;
+    });
+    setChannelPricing((prev) => ({
+      ...prev,
+      [id]: prev[id] || emptyChannelPricing(),
+    }));
+  };
+
+  const updateChannelPricing = (id) => (newPricing) => {
+    setChannelPricing((prev) => ({ ...prev, [id]: newPricing }));
+  };
+
+  /* fetch lines */
   useEffect(() => {
     getLines(token).then((res) => {
       setLines(Array.isArray(res) ? res : res?.lines || res?.data || []);
     }).catch(() => {});
   }, [token]);
 
+  /* fetch active channels */
+  useEffect(() => {
+    setLoadingChannels(true);
+    listSalesChannels(token, { status: 'active', isActive: true })
+      .then(({ channels: list }) => setChannels(list))
+      .catch(() => {})
+      .finally(() => setLoadingChannels(false));
+  }, [token]);
+
+  /* edit: prefill form + channel pricing */
   useEffect(() => {
     if (!isEdit) return;
     setLoadingInit(true);
@@ -204,29 +251,25 @@ export default function ProductFormScreen({ navigation, route, userDetails, appM
           imageUrl:        data?.imageUrl || '',
           lineId:          data?.lineId || data?.line?.lineId || '',
           status:          data?.status || (data?.isActive === false ? 'inactive' : 'active'),
-          prices: {
-            direct: {
-              cifUsd:       toStr(data?.prices?.direct?.cifUsd),
-              wholesaleAed: toStr(data?.prices?.direct?.wholesaleAed),
-              retailAed:    toStr(data?.prices?.direct?.retailAed),
-            },
-            upp: {
-              cifUsd:       toStr(data?.prices?.upp?.cifUsd),
-              wholesaleAed: toStr(data?.prices?.upp?.wholesaleAed),
-              retailAed:    toStr(data?.prices?.upp?.retailAed),
-            },
-            institutional: {
-              cifUsd:       toStr(data?.prices?.institutional?.cifUsd),
-              wholesaleAed: toStr(data?.prices?.institutional?.wholesaleAed),
-              retailAed:    toStr(data?.prices?.institutional?.retailAed),
-            },
-          },
-          defaultFoc: {
-            direct:        { percentage: toStr(data?.defaultFoc?.direct?.percentage) },
-            upp:           { percentage: toStr(data?.defaultFoc?.upp?.percentage) },
-            institutional: { percentage: toStr(data?.defaultFoc?.institutional?.percentage) },
-          },
         });
+
+        /* prefill channel pricing from channelPricing array */
+        const cpList = Array.isArray(data?.channelPricing) ? data.channelPricing : [];
+        const ids = new Set(cpList.map((cp) => cp.channelId).filter(Boolean));
+        const pricing = {};
+        cpList.forEach((cp) => {
+          if (cp.channelId) {
+            pricing[cp.channelId] = {
+              cifUsd:                toStr(cp.cifUsd),
+              wholesaleAed:          toStr(cp.wholesaleAed),
+              retailAed:             toStr(cp.retailAed),
+              defaultFocPercentage:  toStr(cp.defaultFocPercentage),
+              focNotes:              cp.focNotes || '',
+            };
+          }
+        });
+        setSelectedChannelIds(ids);
+        setChannelPricing(pricing);
       })
       .catch((e) => setLoadError(e.message || 'Failed to load product'))
       .finally(() => setLoadingInit(false));
@@ -241,20 +284,30 @@ export default function ProductFormScreen({ navigation, route, userDetails, appM
 
   const toNum = (v) => (v === '' || v == null ? undefined : Number(v));
 
-  const buildPriceObj = (p) => {
-    const obj = {};
-    if (toNum(p.cifUsd)       != null) obj.cifUsd       = toNum(p.cifUsd);
-    if (toNum(p.wholesaleAed) != null) obj.wholesaleAed = toNum(p.wholesaleAed);
-    if (toNum(p.retailAed)    != null) obj.retailAed    = toNum(p.retailAed);
-    return obj;
-  };
-
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true);
     setSaveError('');
     setSaveMessage('');
     try {
+      const cpPayload = Array.from(selectedChannelIds).map((id) => {
+        const ch = channels.find((c) => (c._id || c.channelId) === id);
+        const p = channelPricing[id] || {};
+        const entry = {
+          channelId:    id,
+          cifUsd:       toNum(p.cifUsd),
+          wholesaleAed: toNum(p.wholesaleAed),
+          retailAed:    toNum(p.retailAed),
+        };
+        if (ch?.focEnabled) {
+          entry.defaultFocPercentage = toNum(p.defaultFocPercentage) ?? 0;
+          if (p.focNotes?.trim()) entry.focNotes = p.focNotes.trim();
+        } else {
+          entry.defaultFocPercentage = 0;
+        }
+        return entry;
+      });
+
       const body = {
         productName:     form.productName.trim(),
         productNickname: form.productNickname.trim(),
@@ -263,16 +316,7 @@ export default function ProductFormScreen({ navigation, route, userDetails, appM
         lineId:          form.lineId,
         status:          form.status,
         isActive:        form.status === 'active',
-        prices: {
-          direct:        buildPriceObj(form.prices.direct),
-          upp:           buildPriceObj(form.prices.upp),
-          institutional: buildPriceObj(form.prices.institutional),
-        },
-        defaultFoc: {
-          direct:        toNum(form.defaultFoc.direct.percentage)        != null ? { percentage: toNum(form.defaultFoc.direct.percentage) }        : {},
-          upp:           toNum(form.defaultFoc.upp.percentage)           != null ? { percentage: toNum(form.defaultFoc.upp.percentage) }           : {},
-          institutional: toNum(form.defaultFoc.institutional.percentage) != null ? { percentage: toNum(form.defaultFoc.institutional.percentage) } : {},
-        },
+        channelPricing:  cpPayload,
       };
 
       if (isEdit) {
@@ -402,22 +446,60 @@ export default function ProductFormScreen({ navigation, route, userDetails, appM
               </Field>
             </View>
 
-            {/* Right: Pricing */}
+            {/* Right: Channel selection + pricing */}
             <View style={[styles.formCol, { zIndex: 1 }]}>
-              <SectionHeader title="Pricing by Channel" />
-              <Text style={styles.fieldHint}>Expand each section to enter pricing and default FOC.</Text>
+              <SectionHeader title="Sales Channels & Pricing" />
+              <Text style={styles.fieldHint}>
+                Select the channels this product is available in, then enter pricing for each.
+              </Text>
 
-              {CHANNELS.map((ch) => (
-                <PricingSection
-                  key={ch}
-                  channel={ch}
-                  label={CHANNEL_LABELS[ch]}
-                  prices={form.prices[ch]}
-                  foc={form.defaultFoc[ch]}
-                  onPricesChange={setPrices(ch)}
-                  onFocChange={setFoc(ch)}
-                />
-              ))}
+              {/* Channel checkboxes */}
+              {loadingChannels ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : channels.length === 0 ? (
+                <View style={styles.noChannels}>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
+                  <Text style={styles.noChannelsText}>No active sales channels. Create channels first.</Text>
+                </View>
+              ) : (
+                <View style={styles.channelCheckList}>
+                  {channels.map((ch) => {
+                    const id = ch._id || ch.channelId;
+                    const selected = selectedChannelIds.has(id);
+                    return (
+                      <Pressable key={id} style={[styles.channelCheckItem, selected && styles.channelCheckItemSelected]} onPress={() => toggleChannel(id)}>
+                        <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
+                          {selected && <Ionicons name="checkmark" size={12} color={colors.white} />}
+                        </View>
+                        <Text style={[styles.channelCheckLabel, selected && styles.channelCheckLabelSelected]}>
+                          {ch.channelName}
+                        </Text>
+                        {ch.focEnabled && (
+                          <View style={styles.focPill}>
+                            <Text style={styles.focPillText}>FOC</Text>
+                          </View>
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* Pricing sections for each selected channel */}
+              {channels
+                .filter((ch) => selectedChannelIds.has(ch._id || ch.channelId))
+                .map((ch, idx) => {
+                  const id = ch._id || ch.channelId;
+                  return (
+                    <ChannelPricingSection
+                      key={id}
+                      channel={ch}
+                      color={paletteFor(idx)}
+                      pricing={channelPricing[id] || emptyChannelPricing()}
+                      onChange={updateChannelPricing(id)}
+                    />
+                  );
+                })}
 
               {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
               {saveMessage ? <Text style={styles.successText}>{saveMessage}</Text> : null}
@@ -510,6 +592,28 @@ const styles = StyleSheet.create({
   btnOutline: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, alignSelf: 'flex-start' },
   btnOutlineText: { color: colors.primary, fontSize: 13, fontWeight: '700' },
 
+  /* channel selection */
+  noChannels: { flexDirection: 'row', gap: 8, alignItems: 'center', padding: 12, backgroundColor: colors.backgroundColor, borderRadius: 8 },
+  noChannelsText: { fontSize: 12, color: colors.textMuted },
+
+  channelCheckList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  channelCheckItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
+  },
+  channelCheckItemSelected: { borderColor: colors.primary, backgroundColor: colors.primary + '08' },
+  checkbox: {
+    width: 16, height: 16, borderRadius: 4, borderWidth: 1.5,
+    borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
+  },
+  checkboxSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  channelCheckLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  channelCheckLabelSelected: { color: colors.primary },
+  focPill: { backgroundColor: '#E7F8EF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  focPillText: { fontSize: 10, fontWeight: '700', color: colors.success },
+
+  /* pricing section */
   pricingSection: { borderWidth: 1, borderRadius: 8, overflow: 'hidden' },
   pricingSectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12 },
   pricingSectionLabel: { fontSize: 14, fontWeight: '800' },
@@ -522,7 +626,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, height: 36, fontSize: 13, color: colors.textPrimary,
     backgroundColor: colors.surface, outlineStyle: 'none',
   },
-  focRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  focRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
 
   actionRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border },
   btnPrimary: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, paddingHorizontal: 18, paddingVertical: 9, borderRadius: 8 },

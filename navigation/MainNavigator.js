@@ -22,6 +22,8 @@ export default function MainNavigator({ userDetails, appMetadata, onSignOut }) {
   const ProductDetailScreen = require('../screens/products/ProductDetailScreen').default;
   const ProductFormScreen = require('../screens/products/ProductFormScreen').default;
   const ProductBulkImportScreen = require('../screens/products/ProductBulkImportScreen').default;
+  const SalesChannelsScreen = require('../screens/salesChannels/SalesChannelsScreen').default;
+  const SalesChannelFormScreen = require('../screens/salesChannels/SalesChannelFormScreen').default;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: styles.card }}>
@@ -179,6 +181,26 @@ export default function MainNavigator({ userDetails, appMetadata, onSignOut }) {
       <Stack.Screen name="ProductBulkImport">
         {(props) => (
           <ProductBulkImportScreen
+            {...props}
+            userDetails={userDetails}
+            appMetadata={appMetadata}
+            onSignOut={onSignOut}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="SalesChannels">
+        {(props) => (
+          <SalesChannelsScreen
+            {...props}
+            userDetails={userDetails}
+            appMetadata={appMetadata}
+            onSignOut={onSignOut}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="SalesChannelForm">
+        {(props) => (
+          <SalesChannelFormScreen
             {...props}
             userDetails={userDetails}
             appMetadata={appMetadata}

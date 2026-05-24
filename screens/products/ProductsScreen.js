@@ -9,6 +9,7 @@ import { colors } from '../../constants/colors';
 import { globalHeight, globalWidth } from '../../constants/globalWidth';
 import { listProducts, updateProductStatus, deleteProduct } from '../../store/products/productActions';
 import { getLines } from '../../store/lines/linesActions';
+import { listSalesChannels } from '../../store/salesChannels/salesChannelActions';
 
 const isManager = (role) =>
   ['admin', 'manager', 'senior_manager'].includes(String(role).toLowerCase());
@@ -78,6 +79,36 @@ function LineDropdown({ lines, value, onChange }) {
   );
 }
 
+function ChannelDropdown({ channels, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const sel = channels.find((c) => (c._id || c.channelId) === value);
+  return (
+    <View style={{ zIndex: 15 }}>
+      <Pressable style={styles.filterBtn} onPress={() => setOpen((v) => !v)}>
+        <Text style={styles.filterBtnText} numberOfLines={1}>
+          {sel ? sel.channelName : 'All Channels'}
+        </Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={12} color={colors.textSecondary} />
+      </Pressable>
+      {open && (
+        <View style={styles.filterDropdown}>
+          <Pressable style={[styles.filterOpt, !value && styles.filterOptActive]} onPress={() => { onChange(''); setOpen(false); }}>
+            <Text style={[styles.filterOptText, !value && styles.filterOptTextActive]}>All Channels</Text>
+          </Pressable>
+          {channels.map((c) => {
+            const id = c._id || c.channelId;
+            return (
+              <Pressable key={id} style={[styles.filterOpt, value === id && styles.filterOptActive]} onPress={() => { onChange(id); setOpen(false); }}>
+                <Text style={[styles.filterOptText, value === id && styles.filterOptTextActive]}>{c.channelName}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
+
 function StatusDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const opts = [{ key: '', label: 'All Status' }, { key: 'active', label: 'Active' }, { key: 'inactive', label: 'Inactive' }];
@@ -133,9 +164,11 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [lineFilter, setLineFilter] = useState('');
+  const [channelFilter, setChannelFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState(managerRole ? '' : 'active');
   const [page, setPage] = useState(1);
   const [lines, setLines] = useState([]);
+  const [channels, setChannels] = useState([]);
   const [openMenuId, setOpenMenuId] = useState(null);
 
   useEffect(() => {
@@ -143,6 +176,7 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
       const list = Array.isArray(res) ? res : res?.lines || res?.data || [];
       setLines(list);
     }).catch(() => {});
+    listSalesChannels(token).then(({ channels: list }) => setChannels(list)).catch(() => {});
   }, [token]);
 
   const fetchProducts = useCallback(async (pg = 1) => {
@@ -153,6 +187,7 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
         page: pg, limit: 20,
         ...(search ? { search } : {}),
         ...(lineFilter ? { lineId: lineFilter } : {}),
+        ...(channelFilter ? { channelId: channelFilter } : {}),
         ...(statusFilter ? { status: statusFilter } : {}),
       };
       const res = await listProducts(token, params);
@@ -167,12 +202,12 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
     } finally {
       setLoading(false);
     }
-  }, [token, search, lineFilter, statusFilter]);
+  }, [token, search, lineFilter, channelFilter, statusFilter]);
 
   useEffect(() => {
     const t = setTimeout(() => { setPage(1); fetchProducts(1); }, 300);
     return () => clearTimeout(t);
-  }, [search, lineFilter, statusFilter]);
+  }, [search, lineFilter, channelFilter, statusFilter]);
 
   useEffect(() => { fetchProducts(page); }, [page]);
 
@@ -196,7 +231,11 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
   const inactiveCount = products.length - activeCount;
   const uniqueLines = [...new Set(products.map((p) => p.lineId || p.line?.lineId).filter(Boolean))].length;
   const avgFoc = (() => {
-    const focs = products.flatMap((p) => ['direct', 'upp', 'institutional'].map((ch) => p.defaultFoc?.[ch]?.percentage).filter((v) => v != null && v !== ''));
+    const focs = products.flatMap((p) =>
+      (Array.isArray(p.channelPricing) ? p.channelPricing : [])
+        .map((cp) => cp.defaultFocPercentage)
+        .filter((v) => v != null && v !== '' && Number(v) > 0)
+    );
     if (!focs.length) return null;
     return (focs.reduce((a, b) => a + Number(b), 0) / focs.length).toFixed(1);
   })();
@@ -209,6 +248,7 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
   const clearFilters = () => {
     setSearch('');
     setLineFilter('');
+    setChannelFilter('');
     setStatusFilter(managerRole ? '' : 'active');
   };
 
@@ -265,8 +305,11 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
             {search ? <Pressable onPress={() => setSearch('')}><Ionicons name="close-circle" size={15} color={colors.textMuted} /></Pressable> : null}
           </View>
           <LineDropdown lines={lines} value={lineFilter} onChange={setLineFilter} />
+          {channels.length > 0 && (
+            <ChannelDropdown channels={channels} value={channelFilter} onChange={setChannelFilter} />
+          )}
           {managerRole && <StatusDropdown value={statusFilter} onChange={setStatusFilter} />}
-          {(search || lineFilter || statusFilter) ? (
+          {(search || lineFilter || channelFilter || statusFilter) ? (
             <Pressable style={styles.clearBtn} onPress={clearFilters}>
               <Ionicons name="refresh-outline" size={13} color={colors.textSecondary} />
               <Text style={styles.clearBtnText}>Clear</Text>
@@ -307,16 +350,14 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
             const lineName = product.lineName || product.line?.lineName || product.line?.name || lineId;
             const active = product.isActive !== false && product.status !== 'inactive';
             const lc = lineColor(lineId);
-            const focPct = product.defaultFoc?.direct?.percentage ?? product.defaultFoc?.upp?.percentage ?? null;
-            const direct = product.prices?.direct;
-            const upp = product.prices?.upp;
-            const inst = product.prices?.institutional;
+            const cpList = Array.isArray(product.channelPricing) ? product.channelPricing : [];
+            const focPct = cpList.find((cp) => cp.defaultFocPercentage > 0)?.defaultFocPercentage ?? null;
             const menuOpen = openMenuId === id;
 
             return (
               <Pressable
                 key={id || idx}
-                style={[styles.tableRow, idx % 2 === 1 && styles.tableRowAlt]}
+                style={[styles.tableRow, idx % 2 === 1 && styles.tableRowAlt, { zIndex: products.length - idx }]}
                 onPress={() => navigation.navigate('ProductDetail', { productId: id })}
               >
                 {/* Product */}
@@ -360,20 +401,25 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
 
                 {/* Channel Summary */}
                 <View style={[styles.td, { flex: 3 }]}>
-                  <View style={styles.channelSummary}>
-                    {[
-                      { label: 'Direct', data: direct },
-                      { label: 'UPP', data: upp },
-                      { label: 'Inst.', data: inst },
-                    ].map(({ label, data }) => (
-                      <View key={label} style={styles.channelCol}>
-                        <Text style={styles.channelLabel}>{label}</Text>
-                        <Text style={styles.channelPrice}>
-                          {data?.cifUsd != null ? `$${Number(data.cifUsd).toFixed(2)}` : '—'}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
+                  {cpList.length === 0 ? (
+                    <Text style={styles.cellMuted}>No channels</Text>
+                  ) : (
+                    <View style={styles.channelSummary}>
+                      {cpList.slice(0, 3).map((cp) => (
+                        <View key={cp.channelId || cp.channelKey} style={styles.channelCol}>
+                          <Text style={styles.channelLabel} numberOfLines={1}>
+                            {cp.channelName || cp.channelKey || '—'}
+                          </Text>
+                          <Text style={styles.channelPrice}>
+                            {cp.cifUsd != null ? `$${Number(cp.cifUsd).toFixed(2)}` : '—'}
+                          </Text>
+                        </View>
+                      ))}
+                      {cpList.length > 3 && (
+                        <Text style={styles.cellMuted}>+{cpList.length - 3}</Text>
+                      )}
+                    </View>
+                  )}
                 </View>
 
                 {/* Default FOC */}
@@ -391,7 +437,7 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
                       <Pressable style={styles.actionIcon} onPress={(e) => { e.stopPropagation(); navigation.navigate('ProductForm', { mode: 'edit', productId: id }); }}>
                         <Ionicons name="pencil-outline" size={15} color={colors.primary} />
                       </Pressable>
-                      <View>
+                      <View style={{ zIndex: menuOpen ? 9999 : 1 }}>
                         <Pressable style={styles.actionIcon} onPress={(e) => { e.stopPropagation(); setOpenMenuId(menuOpen ? null : id); }}>
                           <Ionicons name="ellipsis-vertical" size={15} color={colors.textSecondary} />
                         </Pressable>
@@ -462,7 +508,7 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 20, fontWeight: '800', color: colors.textPrimary },
   statSub: { fontSize: 11, color: colors.textMuted, marginTop: 1 },
 
-  tableCard: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.surface, overflow: 'hidden', ...shadow },
+  tableCard: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.surface, ...shadow },
   toolbar: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border, flexWrap: 'wrap' },
   searchWrap: { flex: 1, minWidth: 220, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 10, height: 36 },
   searchInput: { flex: 1, fontSize: 13, color: colors.textPrimary, outlineStyle: 'none' },

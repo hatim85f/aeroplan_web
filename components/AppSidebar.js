@@ -26,8 +26,9 @@ const SIDEBAR_SECTIONS = [
   {
     title: 'PLANNING',
     items: [
-      { icon: 'business', label: 'Accounts', route: 'Accounts' },
-      { icon: 'cube',     label: 'Products', route: 'Products' },
+      { icon: 'business',          label: 'Accounts',       route: 'Accounts' },
+      { icon: 'cube',              label: 'Products',       route: 'Products' },
+      { icon: 'radio-button-on',   label: 'Sales Channels', route: 'SalesChannels' },
     ],
   },
   {

@@ -20,6 +20,17 @@ const LINE_PILL_COLORS = [
 ];
 const lineColor = (lineId) => LINE_PILL_COLORS[(lineId || '').charCodeAt(0) % LINE_PILL_COLORS.length];
 
+/* Dynamic channel color palette — same palette as ProductFormScreen */
+const ACCENT_PALETTE = [
+  { accent: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+  { accent: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
+  { accent: '#C2410C', bg: '#FFF7ED', border: '#FED7AA' },
+  { accent: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE' },
+  { accent: '#0E7490', bg: '#ECFEFF', border: '#A5F3FC' },
+  { accent: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
+];
+const paletteFor = (idx) => ACCENT_PALETTE[idx % ACCENT_PALETTE.length];
+
 function InfoRow({ label, value, mono }) {
   return (
     <View style={styles.infoRow}>
@@ -40,35 +51,40 @@ function SectionCard({ title, children }) {
   );
 }
 
-const CHANNEL_COLORS = {
-  Direct:        { bg: '#EFF6FF', border: '#BFDBFE', accent: '#1D4ED8' },
-  UPP:           { bg: '#F0FDF4', border: '#BBF7D0', accent: '#15803D' },
-  Institutional: { bg: '#FFF7ED', border: '#FED7AA', accent: '#C2410C' },
-};
-
-function PricingCard({ channel, prices, foc }) {
-  const c = CHANNEL_COLORS[channel];
+function ChannelPricingCard({ entry, colorIdx }) {
+  const c = paletteFor(colorIdx);
   const fields = [
-    { label: 'CIF USD', value: prices?.cifUsd       != null ? `$${Number(prices.cifUsd).toFixed(2)}`       : null },
-    { label: 'WS AED',  value: prices?.wholesaleAed != null ? `${Number(prices.wholesaleAed).toFixed(2)}`  : null },
-    { label: 'RP AED',  value: prices?.retailAed    != null ? `${Number(prices.retailAed).toFixed(2)}`     : null },
+    { label: 'CIF USD', value: entry.cifUsd       != null ? `$${Number(entry.cifUsd).toFixed(2)}`       : null },
+    { label: 'WS AED',  value: entry.wholesaleAed != null ? `${Number(entry.wholesaleAed).toFixed(2)}`  : null },
+    { label: 'RP AED',  value: entry.retailAed    != null ? `${Number(entry.retailAed).toFixed(2)}`     : null },
   ];
+  const hasFoc = entry.defaultFocPercentage != null && entry.defaultFocPercentage !== '';
+
   return (
     <View style={[styles.pricingCard, { backgroundColor: c.bg, borderColor: c.border }]}>
       <View style={styles.pricingCardHeader}>
-        <Text style={[styles.pricingChannelLabel, { color: c.accent }]}>{channel}</Text>
-        {foc?.percentage != null && foc.percentage !== '' && (
+        <Text style={[styles.pricingChannelLabel, { color: c.accent }]}>
+          {entry.channelName || entry.channelKey || 'Channel'}
+        </Text>
+        {hasFoc && (
           <View style={[styles.focBadge, { backgroundColor: c.accent + '20' }]}>
-            <Text style={[styles.focBadgeText, { color: c.accent }]}>FOC {foc.percentage}%</Text>
+            <Text style={[styles.focBadgeText, { color: c.accent }]}>
+              FOC {entry.defaultFocPercentage}%
+            </Text>
           </View>
         )}
       </View>
       {fields.map(({ label, value }) => (
         <View key={label} style={styles.pricingRow}>
           <Text style={styles.pricingLabel}>{label}</Text>
-          <Text style={[styles.pricingValue, { color: value ? c.accent : colors.textMuted }]}>{value || '—'}</Text>
+          <Text style={[styles.pricingValue, { color: value ? c.accent : colors.textMuted }]}>
+            {value || '—'}
+          </Text>
         </View>
       ))}
+      {entry.focNotes ? (
+        <Text style={[styles.focNotes, { color: c.accent }]}>{entry.focNotes}</Text>
+      ) : null}
     </View>
   );
 }
@@ -158,6 +174,9 @@ export default function ProductDetailScreen({ navigation, route, userDetails, ap
   const active = product.isActive !== false && product.status !== 'inactive';
   const lc = lineColor(lineId);
 
+  /* channelPricing — new array format; fall back to empty if absent */
+  const channelPricingList = Array.isArray(product.channelPricing) ? product.channelPricing : [];
+
   return (
     <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="Products">
       {/* Breadcrumb */}
@@ -222,7 +241,7 @@ export default function ProductDetailScreen({ navigation, route, userDetails, ap
               <Ionicons name="pencil-outline" size={14} color={colors.white} />
               <Text style={styles.btnPrimaryText}>Edit Product</Text>
             </Pressable>
-            <Pressable style={[styles.btnDanger]} onPress={handleDelete}>
+            <Pressable style={styles.btnDanger} onPress={handleDelete}>
               <Ionicons name="trash-outline" size={14} color={colors.danger} />
               <Text style={[styles.btnOutlineText, { color: colors.danger }]}>Delete</Text>
             </Pressable>
@@ -243,14 +262,25 @@ export default function ProductDetailScreen({ navigation, route, userDetails, ap
           </SectionCard>
         </View>
 
-        {/* Right: Pricing */}
+        {/* Right: Dynamic channel pricing */}
         <View style={styles.rightCol}>
           <SectionCard title="Pricing by Channel">
-            <View style={styles.pricingGrid}>
-              <PricingCard channel="Direct"        prices={product.prices?.direct}        foc={product.defaultFoc?.direct} />
-              <PricingCard channel="UPP"           prices={product.prices?.upp}           foc={product.defaultFoc?.upp} />
-              <PricingCard channel="Institutional" prices={product.prices?.institutional} foc={product.defaultFoc?.institutional} />
-            </View>
+            {channelPricingList.length === 0 ? (
+              <View style={styles.noPricing}>
+                <Ionicons name="pricetags-outline" size={24} color={colors.textMuted} />
+                <Text style={styles.noPricingText}>No channel pricing configured.</Text>
+              </View>
+            ) : (
+              <View style={styles.pricingGrid}>
+                {channelPricingList.map((entry, idx) => (
+                  <ChannelPricingCard
+                    key={entry.channelId || idx}
+                    entry={entry}
+                    colorIdx={idx}
+                  />
+                ))}
+              </View>
+            )}
           </SectionCard>
         </View>
       </View>
@@ -309,12 +339,16 @@ const styles = StyleSheet.create({
   infoLabel: { width: 120, fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
   infoValue: { flex: 1, fontSize: 13, color: colors.textPrimary },
 
+  noPricing: { alignItems: 'center', paddingVertical: 24, gap: 8 },
+  noPricingText: { fontSize: 13, color: colors.textMuted },
+
   pricingGrid: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
   pricingCard: { flex: 1, minWidth: 160, borderWidth: 1, borderRadius: 10, padding: 14 },
   pricingCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   pricingChannelLabel: { fontSize: 14, fontWeight: '800' },
   focBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   focBadgeText: { fontSize: 11, fontWeight: '700' },
+  focNotes: { fontSize: 11, marginTop: 8, fontStyle: 'italic' },
   pricingRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)',
