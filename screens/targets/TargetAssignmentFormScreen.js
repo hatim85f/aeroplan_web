@@ -57,7 +57,7 @@ function ProductDropdown({ options, value, onChange }) {
     : options;
 
   return (
-    <View style={{ position: 'relative', zIndex: open ? 50 : 1 }}>
+    <View style={{ position: 'relative', zIndex: open ? 1000 : 1 }}>
       <Pressable style={styles.input} onPress={() => { setOpen((v) => !v); setQ(''); }}>
         <Text
           style={[{ flex: 1, fontSize: 13 }, selected ? { color: colors.textPrimary } : { color: colors.textMuted }]}
@@ -104,7 +104,7 @@ function YearDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const opts = [THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1].map((y) => String(y));
   return (
-    <View style={{ position: 'relative', zIndex: open ? 40 : 1 }}>
+    <View style={{ position: 'relative', zIndex: open ? 900 : 1 }}>
       <Pressable style={styles.input} onPress={() => setOpen((v) => !v)}>
         <Text style={{ flex: 1, fontSize: 13, color: colors.textPrimary }}>{value}</Text>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textSecondary} />
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 17, fontWeight: '800', color: colors.textPrimary },
   cardSubtitle: { fontSize: 13, color: colors.textSecondary, marginTop: -12 },
 
-  topRow: { flexDirection: 'row', gap: 16, alignItems: 'flex-start' },
+  topRow: { flexDirection: 'row', gap: 16, alignItems: 'flex-start', zIndex: 100 },
   topField: { flex: 1, gap: 6 },
   fieldLabel: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
   required: { color: colors.danger },
@@ -497,7 +497,9 @@ const styles = StyleSheet.create({
   dropdown: {
     position: 'absolute', top: 44, left: 0, right: 0,
     borderWidth: 1, borderColor: colors.border, borderRadius: 8,
-    backgroundColor: colors.surface, ...shadow, zIndex: 100,
+    backgroundColor: '#FFFFFF', zIndex: 9999,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
   },
   dropSearch: {
     borderBottomWidth: 1, borderBottomColor: colors.border,
@@ -510,7 +512,7 @@ const styles = StyleSheet.create({
   dropOptTextActive: { color: colors.primary, fontWeight: '700' },
 
   /* Channels section */
-  channelsSection: { gap: 10 },
+  channelsSection: { gap: 10, zIndex: 1 },
   channelsSectionTitle: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },
 
   channelRow: {
