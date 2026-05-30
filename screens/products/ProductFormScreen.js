@@ -23,8 +23,19 @@ const ACCENT_PALETTE = [
 ];
 const paletteFor = (idx) => ACCENT_PALETTE[idx % ACCENT_PALETTE.length];
 
+const TARGET_BASIS_OPTIONS = [
+  { value: 'cifUsd',       label: 'CIF USD' },
+  { value: 'wholesaleAed', label: 'Wholesale AED' },
+  { value: 'retailAed',    label: 'Retail AED' },
+];
+const TARGET_CURRENCY_OPTIONS = [
+  { value: 'USD', label: 'USD' },
+  { value: 'AED', label: 'AED' },
+];
+
 const emptyChannelPricing = () => ({
   cifUsd: '', wholesaleAed: '', retailAed: '', defaultFocPercentage: '', focNotes: '',
+  targetValueBasis: 'cifUsd', targetCurrency: 'USD',
 });
 
 /* ─── Helpers ───────────────────────────────────────────────────────────── */
@@ -101,10 +112,55 @@ function StatusToggle({ value, onChange }) {
   );
 }
 
+/* ─── Mini dropdown for target calculation fields ──────────────────────────── */
+function MiniDropdown({ options, value, onSelect, accent }) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.value === value);
+  return (
+    <View style={{ position: 'relative', zIndex: open ? 50 : 1 }}>
+      <Pressable
+        style={[styles.priceInput, styles.miniDropdownTrigger]}
+        onPress={() => setOpen((v) => !v)}
+      >
+        <Text style={{ flex: 1, fontSize: 12, color: colors.textPrimary, fontWeight: '600' }}>
+          {selected?.label || value}
+        </Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={11} color={colors.textSecondary} />
+      </Pressable>
+      {open && (
+        <View style={[styles.dropdown, { top: 38, minWidth: 130 }]}>
+          {options.map((opt) => {
+            const sel = opt.value === value;
+            return (
+              <Pressable
+                key={opt.value}
+                style={[styles.dropOpt, sel && { backgroundColor: (accent || colors.primary) + '18' }]}
+                onPress={() => { onSelect(opt.value); setOpen(false); }}
+              >
+                <Text style={[styles.dropOptText, { fontSize: 12 }, sel && { color: accent || colors.primary, fontWeight: '700' }]}>
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
+
 /* ─── Dynamic channel pricing section ─────────────────────────────────────── */
 function ChannelPricingSection({ channel, color, pricing, onChange }) {
   const [open, setOpen] = useState(true);
   const update = (key) => (val) => onChange({ ...pricing, [key]: val });
+
+  const handleBasisChange = (val) => {
+    const currency = val === 'cifUsd' ? 'USD' : 'AED';
+    onChange({ ...pricing, targetValueBasis: val, targetCurrency: currency });
+  };
+
+  const basis    = pricing?.targetValueBasis || 'cifUsd';
+  const currency = pricing?.targetCurrency   || 'USD';
 
   return (
     <View style={[styles.pricingSection, { borderColor: color.border }]}>
@@ -163,6 +219,32 @@ function ChannelPricingSection({ channel, color, pricing, onChange }) {
               </View>
             </View>
           )}
+
+          {/* Target Calculation */}
+          <View style={[styles.targetCalcSection, { borderColor: color.border, backgroundColor: color.bg + '80' }]}>
+            <Text style={[styles.targetCalcTitle, { color: color.accent }]}>Target Calculation</Text>
+            <Text style={styles.fieldHint}>This value will be used later for target value calculation.</Text>
+            <View style={styles.targetCalcRow}>
+              <View style={{ flex: 2 }}>
+                <Text style={styles.priceFieldLabel}>Value Basis</Text>
+                <MiniDropdown
+                  options={TARGET_BASIS_OPTIONS}
+                  value={basis}
+                  onSelect={handleBasisChange}
+                  accent={color.accent}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.priceFieldLabel}>Currency</Text>
+                <MiniDropdown
+                  options={TARGET_CURRENCY_OPTIONS}
+                  value={currency}
+                  onSelect={update('targetCurrency')}
+                  accent={color.accent}
+                />
+              </View>
+            </View>
+          </View>
         </View>
       )}
     </View>
@@ -265,6 +347,8 @@ export default function ProductFormScreen({ navigation, route, userDetails, appM
               retailAed:             toStr(cp.retailAed),
               defaultFocPercentage:  toStr(cp.defaultFocPercentage),
               focNotes:              cp.focNotes || '',
+              targetValueBasis:      cp.targetValueBasis || 'cifUsd',
+              targetCurrency:        cp.targetCurrency   || 'USD',
             };
           }
         });
@@ -294,10 +378,12 @@ export default function ProductFormScreen({ navigation, route, userDetails, appM
         const ch = channels.find((c) => (c._id || c.channelId) === id);
         const p = channelPricing[id] || {};
         const entry = {
-          channelId:    id,
-          cifUsd:       toNum(p.cifUsd),
-          wholesaleAed: toNum(p.wholesaleAed),
-          retailAed:    toNum(p.retailAed),
+          channelId:        id,
+          cifUsd:           toNum(p.cifUsd),
+          wholesaleAed:     toNum(p.wholesaleAed),
+          retailAed:        toNum(p.retailAed),
+          targetValueBasis: p.targetValueBasis || 'cifUsd',
+          targetCurrency:   p.targetCurrency   || 'USD',
         };
         if (ch?.focEnabled) {
           entry.defaultFocPercentage = toNum(p.defaultFocPercentage) ?? 0;
@@ -388,9 +474,10 @@ export default function ProductFormScreen({ navigation, route, userDetails, appM
                 <TextInput
                   style={styles.input}
                   value={form.productNickname}
-                  onChangeText={set('productNickname')}
+                  onChangeText={(text) => set('productNickname')(text.toUpperCase())}
                   placeholder="Short code or nickname"
                   placeholderTextColor={colors.textMuted}
+                  autoCapitalize="characters"
                 />
               </Field>
 
@@ -627,6 +714,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, outlineStyle: 'none',
   },
   focRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
+
+  targetCalcSection: {
+    borderWidth: 1, borderRadius: 8, padding: 12, gap: 8,
+    marginTop: 4,
+  },
+  targetCalcTitle: { fontSize: 12, fontWeight: '800' },
+  targetCalcRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
+  miniDropdownTrigger: {
+    flexDirection: 'row', alignItems: 'center', height: 36, paddingHorizontal: 10,
+  },
 
   actionRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border },
   btnPrimary: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, paddingHorizontal: 18, paddingVertical: 9, borderRadius: 8 },

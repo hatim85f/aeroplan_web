@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +19,19 @@ import { getLines } from "../../store/lines/linesActions";
 import { listSalesChannels } from "../../store/salesChannels/salesChannelActions";
 import { bulkCreateProducts } from "../../store/products/productBulkActions";
 
+/* ─── Batch config ──────────────────────────────────────────────────────── */
+
+const BATCH_SIZE = 15;
+
+const BATCH_MESSAGES = [
+  "Preparing your products for takeoff ✈️",
+  "Uploading your products to the system...",
+  "Processing batch data carefully...",
+  "Your products are boarding the server...",
+  "Crunching numbers and syncing records...",
+  "Almost there — keep the engines running! 🚀",
+];
+
 /* ─── Template column definitions (one row per product-channel) ─────────── */
 
 const TEMPLATE_HEADERS = [
@@ -31,15 +46,20 @@ const TEMPLATE_HEADERS = [
   "Retail AED",
   "Default FOC %",
   "FOC Notes",
+  "Target Value Basis",
+  "Target Currency",
 ];
+
+const VALID_TARGET_BASIS    = ["cifUsd", "wholesaleAed", "retailAed"];
+const VALID_TARGET_CURRENCY = ["USD", "AED"];
 
 const buildExampleRows = (channels) => {
   const ch1 = channels[0]?.channelKey || "direct";
   const ch2 = channels[1]?.channelKey || "upp";
   return [
-    ["Aerocef 1g", "AEROCEF-1G", "ANTI-INFECTIVE", "Injectable antibiotic", "", ch1, 10, 45, 60, 5, "Example FOC note"],
-    ["Aerocef 1g", "AEROCEF-1G", "ANTI-INFECTIVE", "", "", ch2, 11, 48, 64, 3, ""],
-    ["Betacin 500mg", "BETACIN-500", "ANTI-INFECTIVE", "Oral antibiotic", "", ch1, 8, 36, 48, 0, ""],
+    ["Aerocef 1g", "AEROCEF-1G", "ANTI-INFECTIVE", "Injectable antibiotic", "", ch1, 10, 45, 60, 5, "Example FOC note", "cifUsd", "USD"],
+    ["Aerocef 1g", "AEROCEF-1G", "ANTI-INFECTIVE", "", "", ch2, 11, 48, 64, 3, "", "wholesaleAed", "AED"],
+    ["Betacin 500mg", "BETACIN-500", "ANTI-INFECTIVE", "Oral antibiotic", "", ch1, 8, 36, 48, 0, "", "cifUsd", "USD"],
   ];
 };
 
@@ -131,6 +151,22 @@ function parseRows(rows, channelsByKey) {
       entry.defaultFocPercentage = 0;
     }
 
+    const rawBasis    = s(row[11]);
+    const rawCurrency = s(row[12]);
+
+    if (rawBasis && !VALID_TARGET_BASIS.includes(rawBasis)) {
+      errors.push(
+        `Row ${idx + 2}: "Target Value Basis" must be one of: ${VALID_TARGET_BASIS.join(", ")}. Got "${rawBasis}". Defaulting to cifUsd.`
+      );
+    }
+    if (rawCurrency && !VALID_TARGET_CURRENCY.includes(rawCurrency)) {
+      errors.push(
+        `Row ${idx + 2}: "Target Currency" must be USD or AED. Got "${rawCurrency}". Defaulting to USD.`
+      );
+    }
+    entry.targetValueBasis = (rawBasis && VALID_TARGET_BASIS.includes(rawBasis)) ? rawBasis : 'cifUsd';
+    entry.targetCurrency   = (rawCurrency && VALID_TARGET_CURRENCY.includes(rawCurrency)) ? rawCurrency : 'USD';
+
     product.channelPricing.push(entry);
   });
 
@@ -165,6 +201,55 @@ function ResultCard({ icon, iconColor, iconBg, label, value }) {
   );
 }
 
+function BatchProgressCard({ batchProgress, spinValue }) {
+  const { sentBatches, totalBatches, sentProducts, totalProducts } = batchProgress;
+  const pct = totalProducts > 0 ? sentProducts / totalProducts : 0;
+  const pctDisplay = Math.round(pct * 100);
+
+  const message =
+    sentBatches === 0
+      ? BATCH_MESSAGES[0]
+      : sentBatches >= totalBatches
+      ? "Finalizing — almost done! 🎉"
+      : BATCH_MESSAGES[sentBatches % BATCH_MESSAGES.length];
+
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
+  return (
+    <View style={styles.progressCard}>
+      <Animated.View style={{ transform: [{ rotate: spin }], marginBottom: 16 }}>
+        <Ionicons name="settings-outline" size={40} color={colors.primary} />
+      </Animated.View>
+
+      <Text style={styles.progressTitle}>Importing Products…</Text>
+      <Text style={styles.progressMessage}>{message}</Text>
+
+      {/* Progress bar */}
+      <View style={styles.progressBarTrack}>
+        <View style={[styles.progressBarFill, { width: `${pctDisplay}%` }]} />
+      </View>
+
+      <View style={styles.progressStatsRow}>
+        <Text style={styles.progressPct}>{pctDisplay}%</Text>
+        <Text style={styles.progressStats}>
+          {sentProducts} / {totalProducts} products
+          {totalBatches > 1 ? `  ·  Batch ${sentBatches} of ${totalBatches}` : ""}
+        </Text>
+      </View>
+
+      <View style={styles.progressWarningRow}>
+        <Ionicons name="lock-closed-outline" size={12} color={colors.textMuted} />
+        <Text style={styles.progressWarning}>
+          Please don't close or refresh this page
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 /* ─── Main ──────────────────────────────────────────────────────────────── */
 
 export default function ProductBulkImportScreen({
@@ -190,6 +275,29 @@ export default function ProductBulkImportScreen({
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [importError, setImportError] = useState("");
+
+  // Batched import progress
+  const [batchProgress, setBatchProgress] = useState(null);
+  const spinValue = useRef(new Animated.Value(0)).current;
+  const spinLoop = useRef(null);
+
+  const startSpin = () => {
+    spinValue.setValue(0);
+    spinLoop.current = Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1400,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    spinLoop.current.start();
+  };
+
+  const stopSpin = () => {
+    spinLoop.current?.stop();
+    spinValue.setValue(0);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -220,6 +328,7 @@ export default function ProductBulkImportScreen({
     ws1["!cols"] = [
       { wch: 24 }, { wch: 20 }, { wch: 22 }, { wch: 30 }, { wch: 36 },
       { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 28 },
+      { wch: 20 }, { wch: 16 },
     ];
     XLSX.utils.book_append_sheet(wb, ws1, "Products");
 
@@ -308,21 +417,68 @@ export default function ProductBulkImportScreen({
     reader.readAsArrayBuffer(file);
   };
 
-  /* ── Import ── */
+  /* ── Batched import ── */
   const handleImport = async () => {
     if (!parsedProducts?.length) return;
+
+    // Split into chunks of BATCH_SIZE
+    const batches = [];
+    for (let i = 0; i < parsedProducts.length; i += BATCH_SIZE) {
+      batches.push(parsedProducts.slice(i, i + BATCH_SIZE));
+    }
+
     setImporting(true);
     setImportError("");
     setImportResult(null);
+    setBatchProgress({
+      sentBatches: 0,
+      totalBatches: batches.length,
+      sentProducts: 0,
+      totalProducts: parsedProducts.length,
+    });
+    startSpin();
+
+    // Accumulate results across all batches
+    const combined = {
+      total: 0,
+      createdCount: 0,
+      failedCount: 0,
+      createdProductIds: [],
+      failed: [],
+    };
+
     try {
-      const res = await bulkCreateProducts(token, parsedProducts);
-      setImportResult(res?.data || res);
+      for (let i = 0; i < batches.length; i++) {
+        const res = await bulkCreateProducts(token, batches[i]);
+        const data = res?.data || res;
+
+        combined.total       += data?.total        ?? batches[i].length;
+        combined.createdCount += data?.createdCount ?? 0;
+        combined.failedCount  += data?.failedCount  ?? 0;
+        if (Array.isArray(data?.createdProductIds))
+          combined.createdProductIds.push(...data.createdProductIds);
+        if (Array.isArray(data?.failed))
+          combined.failed.push(...data.failed);
+
+        setBatchProgress({
+          sentBatches: i + 1,
+          totalBatches: batches.length,
+          sentProducts: i + 1 < batches.length
+            ? (i + 1) * BATCH_SIZE
+            : parsedProducts.length,
+          totalProducts: parsedProducts.length,
+        });
+      }
+
+      setImportResult(combined);
       setParsedProducts(null);
       setFileName("");
     } catch (e) {
       setImportError(e.message || "Import failed. Please try again.");
     } finally {
+      stopSpin();
       setImporting(false);
+      setBatchProgress(null);
     }
   };
 
@@ -333,6 +489,8 @@ export default function ProductBulkImportScreen({
     setFileName("");
     setImportResult(null);
     setImportError("");
+    setBatchProgress(null);
+    stopSpin();
   };
 
   return (
@@ -544,22 +702,26 @@ export default function ProductBulkImportScreen({
                 </View>
               ) : null}
 
-              <Pressable
-                style={[styles.importBtn, importing && styles.btnDisabled]}
-                onPress={handleImport}
-                disabled={importing}
-              >
-                {importing ? (
-                  <ActivityIndicator size="small" color={colors.white} />
-                ) : (
+              {importing && batchProgress ? (
+                <BatchProgressCard
+                  batchProgress={batchProgress}
+                  spinValue={spinValue}
+                />
+              ) : (
+                <Pressable
+                  style={[styles.importBtn, importing && styles.btnDisabled]}
+                  onPress={handleImport}
+                  disabled={importing}
+                >
                   <Ionicons name="cloud-upload-outline" size={16} color={colors.white} />
-                )}
-                <Text style={styles.importBtnText}>
-                  {importing
-                    ? "Importing…"
-                    : `Import ${parsedProducts.length} Product${parsedProducts.length !== 1 ? "s" : ""}`}
-                </Text>
-              </Pressable>
+                  <Text style={styles.importBtnText}>
+                    {`Import ${parsedProducts.length} Product${parsedProducts.length !== 1 ? "s" : ""}`}
+                    {parsedProducts.length > BATCH_SIZE
+                      ? `  ·  ${Math.ceil(parsedProducts.length / BATCH_SIZE)} batches`
+                      : ""}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           ) : null}
         </View>
@@ -765,4 +927,72 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 9,
   },
   viewProductsText: { color: colors.white, fontSize: globalWidth("0.65%"), fontWeight: "700" },
+
+  /* ── Batch progress card ── */
+  progressCard: {
+    alignItems: "center",
+    backgroundColor: "#F0F5FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 14,
+    paddingVertical: globalHeight("3%"),
+    paddingHorizontal: globalWidth("2%"),
+    marginTop: globalHeight("0.8%"),
+    gap: 6,
+  },
+  progressTitle: {
+    color: colors.textPrimary,
+    fontSize: globalWidth("0.85%"),
+    fontWeight: "800",
+    marginBottom: 2,
+  },
+  progressMessage: {
+    color: colors.primary,
+    fontSize: globalWidth("0.68%"),
+    fontWeight: "600",
+    marginBottom: 14,
+    textAlign: "center",
+  },
+  progressBarTrack: {
+    width: "100%",
+    height: 10,
+    backgroundColor: "#DBEAFE",
+    borderRadius: 999,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    minWidth: 10,
+    transition: "width 0.4s ease",
+  },
+  progressStatsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 10,
+  },
+  progressPct: {
+    color: colors.primary,
+    fontSize: globalWidth("0.72%"),
+    fontWeight: "800",
+  },
+  progressStats: {
+    color: colors.textSecondary,
+    fontSize: globalWidth("0.6%"),
+  },
+  progressWarningRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 4,
+  },
+  progressWarning: {
+    color: colors.textMuted,
+    fontSize: globalWidth("0.55%"),
+    fontStyle: "italic",
+  },
 });

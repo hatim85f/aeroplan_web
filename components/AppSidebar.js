@@ -11,7 +11,10 @@ import { getProfileInitials } from '../constants/profile';
 
 const fallbackLogo = require('../assets/icon.png');
 
-const SIDEBAR_SECTIONS = [
+const isManagerRole = (role) =>
+  ['admin', 'manager', 'senior_manager'].includes(String(role || '').toLowerCase());
+
+const BASE_SECTIONS = [
   {
     title: 'MAIN',
     items: [{ icon: 'home', label: 'Dashboard', route: 'Home' }],
@@ -32,10 +35,43 @@ const SIDEBAR_SECTIONS = [
     ],
   },
   {
-    title: 'ACCOUNT',
-    items: [{ icon: 'person-circle', label: 'Profile', route: 'Profile' }],
+    title: 'MANAGEMENT',
+    items: [
+      { icon: 'people-circle-outline', label: 'Sales Team', route: 'SalesTeam' },
+    ],
+  },
+  {
+    title: 'ORDERS',
+    items: [
+      { icon: 'receipt-outline',       label: 'All Orders',     route: 'Orders' },
+      { icon: 'add-circle-outline',    label: 'Create Order',   route: 'CreateOrder' },
+      { icon: 'time-outline',          label: 'Order History',  route: 'OrderHistory' },
+      { icon: 'pricetag-outline',      label: 'FOC Overrides',  route: 'FocOverridesList' },
+      { icon: 'search-circle-outline', label: 'FOC Lookup',     route: 'FocLookup' },
+    ],
   },
 ];
+
+const ACCOUNT_SECTION = {
+  title: 'ACCOUNT',
+  items: [{ icon: 'person-circle', label: 'Profile', route: 'Profile' }],
+};
+
+const getSidebarSections = (role) => {
+  const targetingSection = {
+    title: 'TARGETING & FORECAST',
+    items: isManagerRole(role)
+      ? [
+          { icon: 'analytics-outline', label: 'Target Dashboard',   route: 'TargetDashboard' },
+          { icon: 'flag-outline',      label: 'Target Assignments', route: 'TargetAssignments' },
+          { icon: 'git-branch-outline', label: 'Target Phasing',    route: 'TargetPhasing' },
+        ]
+      : [
+          { icon: 'analytics-outline', label: 'My Targets', route: 'MyTargetDashboard' },
+        ],
+  };
+  return [...BASE_SECTIONS, targetingSection, ACCOUNT_SECTION];
+};
 
 function formatRole(role) {
   return String(role || 'Representative')
@@ -73,7 +109,7 @@ export default function AppSidebar({ onSignOut, appMetadata, displayName, role, 
 
   return (
     <View style={styles.sidebar}>
-      <ScrollView contentContainerStyle={styles.sidebarScroll}>
+      <ScrollView contentContainerStyle={styles.sidebarScroll} showsVerticalScrollIndicator={false}>
 
         <View style={styles.sidebarLogoRow}>
           <Image source={logoSource} style={styles.sidebarLogo} resizeMode="contain" />
@@ -94,7 +130,7 @@ export default function AppSidebar({ onSignOut, appMetadata, displayName, role, 
         </View>
 
         <View style={styles.sidebarSectionCard}>
-          {SIDEBAR_SECTIONS.map((section) => (
+          {getSidebarSections(role).map((section) => (
             <View key={section.title} style={styles.sidebarSection}>
               <Text style={styles.sidebarSectionTitle}>{section.title}</Text>
               {section.items.map(({ icon, label, route, params }) => {

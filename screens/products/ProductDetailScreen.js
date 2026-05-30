@@ -51,6 +51,12 @@ function SectionCard({ title, children }) {
   );
 }
 
+const TARGET_BASIS_LABELS = {
+  cifUsd:       'CIF USD',
+  wholesaleAed: 'Wholesale AED',
+  retailAed:    'Retail AED',
+};
+
 function ChannelPricingCard({ entry, colorIdx }) {
   const c = paletteFor(colorIdx);
   const fields = [
@@ -59,6 +65,8 @@ function ChannelPricingCard({ entry, colorIdx }) {
     { label: 'RP AED',  value: entry.retailAed    != null ? `${Number(entry.retailAed).toFixed(2)}`     : null },
   ];
   const hasFoc = entry.defaultFocPercentage != null && entry.defaultFocPercentage !== '';
+  const basisLabel   = TARGET_BASIS_LABELS[entry.targetValueBasis] || entry.targetValueBasis || 'CIF USD';
+  const targetCurrency = entry.targetCurrency || 'USD';
 
   return (
     <View style={[styles.pricingCard, { backgroundColor: c.bg, borderColor: c.border }]}>
@@ -85,6 +93,12 @@ function ChannelPricingCard({ entry, colorIdx }) {
       {entry.focNotes ? (
         <Text style={[styles.focNotes, { color: c.accent }]}>{entry.focNotes}</Text>
       ) : null}
+      <View style={[styles.targetCalcRow, { borderColor: c.border }]}>
+        <Text style={styles.targetCalcLabel}>Target Calculation</Text>
+        <Text style={[styles.targetCalcValue, { color: c.accent }]}>
+          {basisLabel} / {targetCurrency}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -349,6 +363,12 @@ const styles = StyleSheet.create({
   focBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   focBadgeText: { fontSize: 11, fontWeight: '700' },
   focNotes: { fontSize: 11, marginTop: 8, fontStyle: 'italic' },
+  targetCalcRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 10, paddingTop: 8, borderTopWidth: 1,
+  },
+  targetCalcLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
+  targetCalcValue: { fontSize: 11, fontWeight: '800' },
   pricingRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)',
