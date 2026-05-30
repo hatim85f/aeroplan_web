@@ -10,11 +10,20 @@ const buildQuery = (params = {}) => {
 
 export const listTargetPhasing = async (token, params = {}) => {
   const result = await apiRequest(`/target-phasing${buildQuery(params)}`, { token });
-  const raw = result?.data || result?.phasings || result?.phasing || [];
-  return {
-    phasings: Array.isArray(raw) ? raw : [],
-    pagination: result?.pagination || { page: 1, limit: 50, total: 0, pages: 1 },
-  };
+  let raw;
+  if (Array.isArray(result?.data)) {
+    raw = result.data;
+  } else if (Array.isArray(result?.data?.phasings)) {
+    raw = result.data.phasings;
+  } else if (Array.isArray(result?.phasings)) {
+    raw = result.phasings;
+  } else if (Array.isArray(result?.phasing)) {
+    raw = result.phasing;
+  } else {
+    raw = [];
+  }
+  const pagination = result?.pagination || result?.data?.pagination || { page: 1, limit: 50, total: raw.length, pages: 1 };
+  return { phasings: raw, pagination };
 };
 
 export const getTargetPhasingById = async (token, id) => {

@@ -98,21 +98,23 @@ function FilterDropdown({ label, options, value, onChange }) {
 }
 
 export default function TargetDashboardScreen({ navigation, userDetails, appMetadata, onSignOut }) {
-  const user = userDetails?.user || userDetails?.data?.user || userDetails || {};
-  const token = userDetails?.token || userDetails?.data?.token || '';
-  const role = user.role || '';
+  const user    = userDetails?.user || userDetails?.data?.user || userDetails || {};
+  const token   = userDetails?.token || userDetails?.data?.token || '';
+  const role    = user.role || '';
+  const manager = isManager(role);
 
-  if (!isManager(role)) {
-    navigation.replace('MyTargetDashboard');
-    return null;
-  }
-
+  /* All hooks must be called unconditionally — redirect happens in useEffect */
   const [overview, setOverview] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [year, setYear] = useState(String(THIS_YEAR));
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState('');
+  const [year, setYear]         = useState(String(THIS_YEAR));
+
+  useEffect(() => {
+    if (!manager) navigation.replace('MyTargetDashboard');
+  }, [manager]);
 
   const fetch = useCallback(async () => {
+    if (!manager) return;
     setLoading(true);
     setError('');
     try {
@@ -123,9 +125,11 @@ export default function TargetDashboardScreen({ navigation, userDetails, appMeta
     } finally {
       setLoading(false);
     }
-  }, [token, year]);
+  }, [token, year, manager]);
 
   useEffect(() => { fetch(); }, [fetch]);
+
+  if (!manager) return null;
 
   const yearOpts = YEAR_OPTIONS.map((y) => ({ value: String(y), label: String(y) }));
 
