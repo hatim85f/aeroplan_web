@@ -12,7 +12,7 @@ import {
   updateTargetAssignmentStatus,
   deleteTargetAssignment,
 } from '../../store/targets/targetAssignmentActions';
-import { listSalesTeamMembers } from '../../store/salesTeam/salesTeamActions';
+import { listAllMedicalReps } from '../../store/teams/teamsActions';
 import { listProducts } from '../../store/products/productActions';
 import { listSalesChannels } from '../../store/salesChannels/salesChannelActions';
 
@@ -124,9 +124,9 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
   const [deletingId, setDeletingId] = useState('');
   const [togglingId, setTogglingId] = useState('');
 
-  /* load filter options */
+  /* load filter options — medical reps come from teams, NOT sales team */
   useEffect(() => {
-    listSalesTeamMembers(token, { limit: 200 }).then(({ data }) => setReps(data)).catch(() => {});
+    listAllMedicalReps(token).then((data) => setReps(Array.isArray(data) ? data : [])).catch(() => {});
     listProducts(token, { limit: 200, status: 'active' }).then(({ products: p }) => setProducts(p)).catch(() => {});
     listSalesChannels(token, { status: 'active' }).then(({ channels: c }) => setChannels(c)).catch(() => {});
   }, [token]);
@@ -187,7 +187,14 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
     }
   };
 
-  const repOpts   = [{ value: '', label: 'All Reps' }, ...reps.map((r) => ({ value: r.userId || r._id, label: r.fullName || r.name || r.email || r._id }))];
+  /* Medical rep ID: prefer userId (user account ref), then medicalRepId, then _id */
+  const repOpts = [
+    { value: '', label: 'All Reps' },
+    ...reps.map((r) => ({
+      value: r.userId || r.medicalRepId || r._id || r.id || '',
+      label: r.fullName || r.name || r.email || r.medicalRepId || r._id || 'Unknown Rep',
+    })),
+  ];
   const prodOpts  = [{ value: '', label: 'All Products' }, ...products.map((p) => ({ value: p._id || p.productId, label: `${p.productName || p.name}${p.productNickname ? ` (${p.productNickname})` : ''}` }))];
   const chanOpts  = [{ value: '', label: 'All Channels' }, ...channels.map((c) => ({ value: c._id || c.channelId, label: c.channelName || c.channelKey }))];
   const statOpts  = [
@@ -289,7 +296,9 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
                   const id       = a._id || a.id;
                   const product  = a.productId || {};
                   const channel  = a.channelId || {};
-                  const repName  = a.userId?.fullName || a.userId?.name || a.repName || a.repId?.fullName || '—';
+                  /* userId is populated by backend as a user object */
+                  const repUser  = a.userId || a.repId || {};
+                  const repName  = repUser.fullName || repUser.name || repUser.email || a.repName || '—';
                   const pName    = product.productName || product.name || a.productName || '—';
                   const pNick    = product.productNickname || a.productNickname || '';
                   const chName   = channel.channelName || channel.channelKey || a.channelName || '—';

@@ -12,7 +12,7 @@ import {
   updateTargetAssignment,
   getTargetAssignmentById,
 } from '../../store/targets/targetAssignmentActions';
-import { listSalesTeamMembers } from '../../store/salesTeam/salesTeamActions';
+import { listAllMedicalReps } from '../../store/teams/teamsActions';
 import { listProducts } from '../../store/products/productActions';
 
 const THIS_YEAR = new Date().getFullYear();
@@ -184,9 +184,9 @@ export default function TargetAssignmentFormScreen({ navigation, route, userDeta
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [channelPricingInfo, setChannelPricingInfo] = useState(null);
 
-  /* load reps + products */
+  /* load medical reps (from teams) + products */
   useEffect(() => {
-    listSalesTeamMembers(token, { limit: 300 }).then(({ data }) => setReps(data)).catch(() => {});
+    listAllMedicalReps(token).then((data) => setReps(Array.isArray(data) ? data : [])).catch(() => {});
     listProducts(token, { limit: 300, status: 'active' }).then(({ products: p }) => setProducts(p)).catch(() => {});
   }, [token]);
 
@@ -288,7 +288,11 @@ export default function TargetAssignmentFormScreen({ navigation, route, userDeta
       }).filter((o) => o.value)
     : [];
 
-  const repOptions     = reps.map((r) => ({ value: r.userId || r._id, label: r.fullName || r.name || r.email }));
+  /* Medical rep: prefer userId (user account ID used in target payload), then medicalRepId, then _id */
+  const repOptions = reps.map((r) => ({
+    value: r.userId || r.medicalRepId || r._id || r.id || '',
+    label: `${r.fullName || r.name || r.email || 'Unknown'}${r._teamName ? ` · ${r._teamName}` : ''}`,
+  }));
   const productOptions = products.map((p) => ({ value: p._id || p.productId, label: `${p.productName || p.name}${p.productNickname ? ` · ${p.productNickname}` : ''}` }));
   const yearOptions    = [THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1].map((y) => ({ value: String(y), label: String(y) }));
   const statusOptions  = [

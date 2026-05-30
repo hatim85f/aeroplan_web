@@ -9,7 +9,7 @@ import AppShell from '../../components/AppShell';
 import { colors } from '../../constants/colors';
 import { globalHeight, globalWidth } from '../../constants/globalWidth';
 import { bulkCreateTargetAssignments } from '../../store/targets/targetAssignmentActions';
-import { listSalesTeamMembers } from '../../store/salesTeam/salesTeamActions';
+import { listAllMedicalReps } from '../../store/teams/teamsActions';
 import { listProducts } from '../../store/products/productActions';
 
 const TEMPLATE_HEADERS = [
@@ -67,10 +67,10 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
 
   useEffect(() => {
     Promise.all([
-      listSalesTeamMembers(token, { limit: 500 }),
+      listAllMedicalReps(token),
       listProducts(token, { limit: 500 }),
-    ]).then(([repRes, prodRes]) => {
-      setReps(repRes.data || []);
+    ]).then(([repData, prodRes]) => {
+      setReps(Array.isArray(repData) ? repData : []);
       setProducts(prodRes.products || []);
     }).catch(() => {})
       .finally(() => setLoadingData(false));
@@ -135,11 +135,12 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
         const errors = [];
         const valid  = [];
 
-        // Build lookup maps
+        // Build lookup maps for medical reps (from teams)
         const repByEmail = {};
         const repByName  = {};
         reps.forEach((r) => {
-          if (r.email) repByEmail[r.email.toLowerCase()] = r;
+          const email = r.email || r.userEmail || '';
+          if (email) repByEmail[email.toLowerCase()] = r;
           const name = (r.fullName || r.name || '').toLowerCase();
           if (name) repByName[name] = r;
         });
@@ -220,7 +221,8 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
             totalTargetUnits: unitsStr ? Number(unitsStr) : undefined,
             totalTargetValue: valueStr ? Number(valueStr) : undefined,
             errors: rowErrors,
-            userId:    rep ? (rep.userId || rep._id) : null,
+            /* Medical rep userId = user account ID (not medicalRepId record ID) */
+            userId:    rep ? (rep.userId || rep.medicalRepId || rep._id || rep.id) : null,
             productId: product ? (product._id || product.productId) : null,
             channelId,
             year:      Number(yearVal),
