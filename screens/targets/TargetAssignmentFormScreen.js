@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -13,6 +13,7 @@ import {
   updateTargetAssignment,
 } from '../../store/targets/targetAssignmentActions';
 import { listProducts } from '../../store/products/productActions';
+import { listSalesChannels } from '../../store/salesChannels/salesChannelActions';
 
 const THIS_YEAR = new Date().getFullYear();
 
@@ -77,7 +78,7 @@ function ProductDropdown({ options, value, onChange }) {
             placeholderTextColor={colors.textMuted}
             autoFocus
           />
-          <View style={{ maxHeight: 220 }}>
+          <ScrollView style={{ maxHeight: 240 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
             {filtered.map((opt) => (
               <Pressable
                 key={opt.value}
@@ -92,7 +93,7 @@ function ProductDropdown({ options, value, onChange }) {
                 </Text>
               </Pressable>
             ))}
-          </View>
+          </ScrollView>
         </View>
       )}
     </View>
@@ -127,8 +128,9 @@ function YearDropdown({ value, onChange }) {
 }
 
 /* ─── Channel row ───────────────────────────────────────────────────────── */
-function ChannelRow({ cp, units, onChange }) {
-  const name     = getChannelName(cp);
+function ChannelRow({ cp, units, onChange, channelMap }) {
+  const cid      = getChannelId(cp);
+  const name     = channelMap?.[String(cid)] || getChannelName(cp) || cid;
   const basis    = cp.targetValueBasis || 'cifUsd';
   const price    = getBasisPrice(cp);
   const currency = cp.targetCurrency || 'USD';
@@ -210,6 +212,7 @@ export default function TargetAssignmentFormScreen({
   const token = userDetails?.token || userDetails?.data?.token || '';
 
   const [products,     setProducts]     = useState([]);
+  const [channelMap,   setChannelMap]   = useState({});  // { [channelId]: channelName }
   const [loadingInit,  setLoadingInit]  = useState(isEdit || isDuplicate);
   const [saving,       setSaving]       = useState(false);
   const [loadError,    setLoadError]    = useState('');
@@ -222,10 +225,21 @@ export default function TargetAssignmentFormScreen({
   const [year,            setYear]            = useState(String(THIS_YEAR));
   const [channelUnits,    setChannelUnits]    = useState({});   // { [channelId]: string }
 
-  /* Load products */
+  /* Load products + channels (for name lookup) */
   useEffect(() => {
     listProducts(token, { limit: 300, status: 'active' })
       .then(({ products: p }) => setProducts(p))
+      .catch(() => {});
+
+    listSalesChannels(token, {})
+      .then(({ channels }) => {
+        const map = {};
+        (channels || []).forEach((ch) => {
+          const id = ch._id || ch.channelId;
+          if (id) map[String(id)] = ch.channelName || ch.channelKey || String(id);
+        });
+        setChannelMap(map);
+      })
       .catch(() => {});
   }, [token]);
 
@@ -405,6 +419,7 @@ export default function TargetAssignmentFormScreen({
                 <ChannelRow
                   key={cid}
                   cp={cp}
+                  channelMap={channelMap}
                   units={channelUnits[cid] ?? ''}
                   onChange={(v) => setChannelUnits((prev) => ({ ...prev, [cid]: v }))}
                 />
