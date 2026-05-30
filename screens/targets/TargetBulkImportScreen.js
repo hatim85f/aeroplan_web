@@ -293,27 +293,45 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
   const validRows   = parsedRows.filter((r) => r._valid);
   const invalidRows = parsedRows.filter((r) => !r._valid);
 
+  const BATCH_SIZE = 15;
+
   const handleSubmit = async () => {
     if (validRows.length === 0) return;
     setSubmitting(true);
     setResults([]);
     setProgress({ done: 0, total: validRows.length });
 
-    const newResults = [];
-    for (const row of validRows) {
-      try {
-        await createTargetFromProductAssignments(token, {
-          productId:      row.productId,
-          year:           row.year,
-          channelTargets: row.channelTargets.map(({ channelId, units }) => ({ channelId, units })),
-        });
-        newResults.push({ nick: row.productNickname, name: row.productName, status: 'success', message: `${row.channelTargets.length} channel(s) set` });
-      } catch (e) {
-        newResults.push({ nick: row.productNickname, name: row.productName, status: 'error', message: e.message || 'Failed' });
-      }
-      setProgress((p) => ({ ...p, done: p.done + 1 }));
-      setResults([...newResults]);
+    const allResults = [];
+
+    /* Send in batches of BATCH_SIZE — concurrent within each batch */
+    for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
+      const batch = validRows.slice(i, i + BATCH_SIZE);
+
+      const batchResults = await Promise.allSettled(
+        batch.map((row) =>
+          createTargetFromProductAssignments(token, {
+            productId:      row.productId,
+            year:           row.year,
+            channelTargets: row.channelTargets.map(({ channelId, units }) => ({ channelId, units })),
+          }).then(() => ({
+            nick: row.productNickname, name: row.productName,
+            status: 'success', message: `${row.channelTargets.length} channel(s) set`,
+          })).catch((e) => ({
+            nick: row.productNickname, name: row.productName,
+            status: 'error', message: e.message || 'Failed',
+          }))
+        )
+      );
+
+      batchResults.forEach((r) => {
+        const entry = r.status === 'fulfilled' ? r.value : { nick: '—', name: '—', status: 'error', message: 'Unexpected error' };
+        allResults.push(entry);
+      });
+
+      setProgress({ done: allResults.length, total: validRows.length });
+      setResults([...allResults]);
     }
+
     setSubmitting(false);
     setParsedRows([]);
     setFileName('');
@@ -496,11 +514,15 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
                   {submitting
                     ? <>
                         <ActivityIndicator size={14} color={colors.white} />
-                        <Text style={styles.btnPrimaryText}>Submitting {progress.done}/{progress.total}…</Text>
+                        <Text style={styles.btnPrimaryText}>
+                          Batch {Math.ceil(progress.done / BATCH_SIZE)}/{Math.ceil(progress.total / BATCH_SIZE)} · {progress.done}/{progress.total}
+                        </Text>
                       </>
                     : <>
                         <Ionicons name="checkmark-done-outline" size={15} color={colors.white} />
-                        <Text style={styles.btnPrimaryText}>Submit {validRows.length} Assignment{validRows.length > 1 ? 's' : ''}</Text>
+                        <Text style={styles.btnPrimaryText}>
+                          Submit {validRows.length} Assignment{validRows.length > 1 ? 's' : ''} ({Math.ceil(validRows.length / BATCH_SIZE)} batch{Math.ceil(validRows.length / BATCH_SIZE) > 1 ? 'es' : ''} of 15)
+                        </Text>
                       </>
                   }
                 </Pressable>

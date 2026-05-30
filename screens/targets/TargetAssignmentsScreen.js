@@ -9,6 +9,7 @@ import { colors } from '../../constants/colors';
 import { globalHeight, globalWidth } from '../../constants/globalWidth';
 import {
   listTargetAssignments,
+  getTargetOverview,
   updateTargetAssignmentStatus,
   deleteTargetAssignment,
 } from '../../store/targets/targetAssignmentActions';
@@ -124,6 +125,13 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
   const [deletingId, setDeletingId] = useState('');
   const [togglingId, setTogglingId] = useState('');
 
+  const [overview, setOverview] = useState(null);
+
+  /* load overview stats — refetch when year filter changes */
+  useEffect(() => {
+    getTargetOverview(token, { year: filterYear }).then(setOverview).catch(() => {});
+  }, [token, filterYear]);
+
   /* load filter options — medical reps come from teams, NOT sales team */
   useEffect(() => {
     listAllMedicalReps(token).then((data) => setReps(Array.isArray(data) ? data : [])).catch(() => {});
@@ -206,6 +214,19 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
   ];
   const yearOpts = [{ value: '', label: 'All Years' }, ...[THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1].map((y) => ({ value: String(y), label: String(y) }))];
 
+  /* overview-derived stats */
+  const totalValue    = overview?.totalTargetValue ?? null;
+  const totalUnits    = overview?.totalTargetUnits ?? null;
+  const productCount  = Array.isArray(overview?.targetByProduct) ? overview.targetByProduct.length : null;
+  const byChannel     = Array.isArray(overview?.targetByChannel) ? overview.targetByChannel : [];
+  const activeCount   = overview?.activeAssignmentsCount ?? null;
+
+  const fmtCompact = (n) => {
+    if (n == null) return '—';
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000)     return `$${(n / 1_000).toFixed(1)}K`;
+    return `$${n}`;
+  };
   const fmtDate = (d) => d ? d.slice(0, 10) : '—';
   const fmtNum  = (n) => n != null ? Number(n).toLocaleString() : '—';
   const fmtVal  = (v, cur) => {
@@ -240,6 +261,38 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
               </View>
             )}
           </View>
+
+          {/* ── Stats bar ── */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsScroll} contentContainerStyle={styles.statsRow}>
+            <View style={styles.statPill}>
+              <Text style={styles.statPillLabel}>Products</Text>
+              <Text style={styles.statPillValue}>{productCount ?? '—'}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statPill}>
+              <Text style={styles.statPillLabel}>Total Value</Text>
+              <Text style={styles.statPillValue}>{fmtCompact(totalValue)}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statPill}>
+              <Text style={styles.statPillLabel}>Total Units</Text>
+              <Text style={styles.statPillValue}>{totalUnits != null ? Number(totalUnits).toLocaleString() : '—'}</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statPill}>
+              <Text style={styles.statPillLabel}>Active</Text>
+              <Text style={[styles.statPillValue, { color: '#15803D' }]}>{activeCount ?? '—'}</Text>
+            </View>
+            {byChannel.map((ch, i) => (
+              <React.Fragment key={ch.channelId || i}>
+                <View style={styles.statDivider} />
+                <View style={styles.statPill}>
+                  <Text style={styles.statPillLabel}>{ch.channelName || ch.channelKey || 'Channel'}</Text>
+                  <Text style={styles.statPillValue}>{fmtCompact(ch.totalTargetValue)}</Text>
+                </View>
+              </React.Fragment>
+            ))}
+          </ScrollView>
 
           <View style={styles.filtersRow}>
             <View style={styles.searchWrap}>
@@ -394,6 +447,14 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: 20, fontWeight: '800', color: colors.textPrimary },
   pageSubtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
   headerActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+
+  /* Stats bar */
+  statsScroll: { marginBottom: globalHeight('0.6%') },
+  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 0, paddingVertical: 4 },
+  statPill: { paddingHorizontal: 14, paddingVertical: 2, alignItems: 'center', gap: 1 },
+  statPillLabel: { fontSize: 10, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.4 },
+  statPillValue: { fontSize: 16, fontWeight: '800', color: colors.textPrimary },
+  statDivider: { width: 1, height: 28, backgroundColor: colors.border, marginHorizontal: 4 },
 
   filtersRow: {
     flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center', zIndex: 20,
