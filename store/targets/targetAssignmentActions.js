@@ -71,3 +71,10 @@ export const updateTargetAssignmentStatus = async (token, id, payload) => {
 export const deleteTargetAssignment = async (token, id) => {
   return apiRequest(`/target-assignments/${id}`, { token, method: 'DELETE' });
 };
+
+export const createTargetFromProductAssignments = async (token, payload) => {
+  const result = await apiRequest('/target-assignments/from-product-assignments', {
+    token, method: 'POST', body: payload,
+  });
+  return result?.data || result;
+};
