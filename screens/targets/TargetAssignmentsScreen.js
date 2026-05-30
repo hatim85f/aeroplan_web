@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -214,94 +214,102 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
     return `${sym}${Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
   };
 
-  return (
-    <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="TargetAssignments">
+  const COL_HEADS = ['Medical Rep', 'Product', 'Channel', 'Start', 'End', 'Units', 'Value', 'Currency', 'Status', 'Actions'];
 
-      {/* Page header */}
-      <View style={styles.pageHeader}>
-        <View>
-          <Text style={styles.pageTitle}>Target Assignments</Text>
-          <Text style={styles.pageSubtitle}>Manage sales target assignments by rep, product, and channel</Text>
+  return (
+    <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="TargetAssignments" scrollable={false}>
+      <View style={styles.screen}>
+
+        {/* ── Top section: title + filters (padded) ── */}
+        <View style={styles.topSection}>
+          <View style={styles.pageHeader}>
+            <View>
+              <Text style={styles.pageTitle}>Target Assignments</Text>
+              <Text style={styles.pageSubtitle}>Manage sales target assignments by rep, product, and channel</Text>
+            </View>
+            {manager && (
+              <View style={styles.headerActions}>
+                <Pressable style={styles.btnOutline} onPress={() => navigation.navigate('TargetBulkImport')}>
+                  <Ionicons name="cloud-upload-outline" size={14} color={colors.primary} />
+                  <Text style={styles.btnOutlineText}>Bulk Upload</Text>
+                </Pressable>
+                <Pressable style={styles.btnPrimary} onPress={() => navigation.navigate('TargetAssignmentForm', { mode: 'create' })}>
+                  <Ionicons name="add" size={14} color={colors.white} />
+                  <Text style={styles.btnPrimaryText}>Add Assignment</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.filtersRow}>
+            <View style={styles.searchWrap}>
+              <Ionicons name="search-outline" size={14} color={colors.textMuted} />
+              <TextInput
+                style={styles.searchInput}
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Search by rep, product..."
+                placeholderTextColor={colors.textMuted}
+              />
+              {search ? (
+                <Pressable onPress={() => setSearch('')}>
+                  <Ionicons name="close-circle" size={14} color={colors.textMuted} />
+                </Pressable>
+              ) : null}
+            </View>
+            <FilterDropdown label="All Reps"     options={repOpts}  value={filterRep}     onChange={setFilterRep}     style={{ zIndex: 25 }} />
+            <FilterDropdown label="All Products" options={prodOpts} value={filterProduct} onChange={setFilterProduct} style={{ zIndex: 24 }} />
+            <FilterDropdown label="All Channels" options={chanOpts} value={filterChannel} onChange={setFilterChannel} style={{ zIndex: 23 }} />
+            <FilterDropdown label="All Status"   options={statOpts} value={filterStatus}  onChange={setFilterStatus}  style={{ zIndex: 22 }} />
+            <FilterDropdown label="Year"         options={yearOpts} value={filterYear}    onChange={setFilterYear}    style={{ zIndex: 21 }} />
+            {(filterRep || filterProduct || filterChannel || filterStatus || search) && (
+              <Pressable style={styles.clearBtn} onPress={() => { setFilterRep(''); setFilterProduct(''); setFilterChannel(''); setFilterStatus(''); setSearch(''); }}>
+                <Text style={styles.clearBtnText}>Clear</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
-        {manager && (
-          <View style={styles.headerActions}>
-            <Pressable style={styles.btnOutline} onPress={() => navigation.navigate('TargetBulkImport')}>
-              <Ionicons name="cloud-upload-outline" size={14} color={colors.primary} />
-              <Text style={styles.btnOutlineText}>Bulk Upload</Text>
-            </Pressable>
-            <Pressable style={styles.btnPrimary} onPress={() => navigation.navigate('TargetAssignmentForm', { mode: 'create' })}>
-              <Ionicons name="add" size={14} color={colors.white} />
-              <Text style={styles.btnPrimaryText}>Add Assignment</Text>
+
+        {/* ── Table: fills remaining height ── */}
+        {loading ? (
+          <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>
+        ) : error ? (
+          <View style={styles.centered}>
+            <Text style={styles.errorText}>{error}</Text>
+            <Pressable style={styles.btnOutline} onPress={() => fetchAssignments(page)}>
+              <Text style={styles.btnOutlineText}>Retry</Text>
             </Pressable>
           </View>
-        )}
-      </View>
+        ) : (
+          <View style={styles.tableContainer}>
+            {/* Sticky header */}
+            <View style={styles.tableHead}>
+              {COL_HEADS.map((h) => (
+                <Text key={h} style={[styles.th, h === 'Actions' && styles.thRight]}>{h}</Text>
+              ))}
+            </View>
 
-      {/* Filters */}
-      <View style={styles.filtersRow}>
-        <View style={styles.searchWrap}>
-          <Ionicons name="search-outline" size={14} color={colors.textMuted} />
-          <TextInput
-            style={styles.searchInput}
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search by rep, product..."
-            placeholderTextColor={colors.textMuted}
-          />
-          {search ? (
-            <Pressable onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={14} color={colors.textMuted} />
-            </Pressable>
-          ) : null}
-        </View>
-        <FilterDropdown label="All Reps"     options={repOpts}  value={filterRep}     onChange={setFilterRep}     style={{ zIndex: 25 }} />
-        <FilterDropdown label="All Products" options={prodOpts} value={filterProduct} onChange={setFilterProduct} style={{ zIndex: 24 }} />
-        <FilterDropdown label="All Channels" options={chanOpts} value={filterChannel} onChange={setFilterChannel} style={{ zIndex: 23 }} />
-        <FilterDropdown label="All Status"   options={statOpts} value={filterStatus}  onChange={setFilterStatus}  style={{ zIndex: 22 }} />
-        <FilterDropdown label="Year"         options={yearOpts} value={filterYear}    onChange={setFilterYear}    style={{ zIndex: 21 }} />
-        {(filterRep || filterProduct || filterChannel || filterStatus || search) && (
-          <Pressable style={styles.clearBtn} onPress={() => { setFilterRep(''); setFilterProduct(''); setFilterChannel(''); setFilterStatus(''); setSearch(''); }}>
-            <Text style={styles.clearBtnText}>Clear</Text>
-          </Pressable>
-        )}
-      </View>
-
-      {/* Table */}
-      {loading ? (
-        <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>
-      ) : error ? (
-        <View style={styles.centered}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.btnOutline} onPress={() => fetchAssignments(page)}>
-            <Text style={styles.btnOutlineText}>Retry</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View style={styles.tableCard}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={{ minWidth: 1000 }}>
-              {/* Head */}
-              <View style={styles.tableHead}>
-                {['Medical Rep','Product','Channel','Start','End','Units','Value','Currency','Status','Actions'].map((h) => (
-                  <Text key={h} style={[styles.th, h === 'Actions' && { textAlign: 'right' }]}>{h}</Text>
-                ))}
-              </View>
-
+            {/* Scrollable rows */}
+            <ScrollView
+              style={{ flex: 1 }}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ flexGrow: 1 }}
+            >
               {assignments.length === 0 ? (
                 <View style={styles.emptyRow}>
+                  <Ionicons name="flag-outline" size={28} color={colors.textMuted} />
                   <Text style={styles.emptyRowText}>No target assignments found</Text>
                 </View>
               ) : (
                 assignments.map((a) => {
-                  const id       = a._id || a.id;
-                  const product  = a.productId || {};
-                  const channel  = a.channelId || {};
-                  /* userId is populated by backend as a user object */
-                  const repUser  = a.userId || a.repId || {};
-                  const repName  = repUser.fullName || repUser.name || repUser.email || a.repName || '—';
-                  const pName    = product.productName || product.name || a.productName || '—';
-                  const pNick    = product.productNickname || a.productNickname || '';
-                  const chName   = channel.channelName || channel.channelKey || a.channelName || '—';
+                  const id      = a._id || a.id;
+                  const product = a.productId || {};
+                  const channel = a.channelId || {};
+                  const repUser = a.userId || a.repId || {};
+                  const repName = repUser.fullName || repUser.name || repUser.email || a.repName || '—';
+                  const pName   = product.productName || product.name || a.productName || '—';
+                  const pNick   = product.productNickname || a.productNickname || '';
+                  const chName  = channel.channelName || channel.channelKey || a.channelName || '—';
                   const currency = a.currency || 'USD';
                   return (
                     <View key={id} style={styles.tableRow}>
@@ -318,21 +326,17 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
                       <Text style={styles.td}>{currency}</Text>
                       <View style={styles.td}><StatusBadge status={a.status || 'active'} /></View>
                       <View style={[styles.td, styles.tdActions]}>
-                        {/* View */}
                         <Pressable style={styles.actionBtn} onPress={() => navigation.navigate('TargetAssignmentDetails', { assignmentId: id })}>
                           <Ionicons name="eye-outline" size={15} color={colors.textSecondary} />
                         </Pressable>
                         {manager && (
                           <>
-                            {/* Edit */}
                             <Pressable style={styles.actionBtn} onPress={() => navigation.navigate('TargetAssignmentForm', { mode: 'edit', assignmentId: id })}>
                               <Ionicons name="create-outline" size={15} color={colors.primary} />
                             </Pressable>
-                            {/* Duplicate */}
                             <Pressable style={styles.actionBtn} onPress={() => navigation.navigate('TargetAssignmentForm', { mode: 'duplicate', assignmentId: id })}>
                               <Ionicons name="copy-outline" size={15} color="#7C3AED" />
                             </Pressable>
-                            {/* Toggle */}
                             <Pressable style={styles.actionBtn} onPress={() => handleToggleStatus(a)} disabled={togglingId === id}>
                               {togglingId === id
                                 ? <ActivityIndicator size={13} color={colors.textMuted} />
@@ -346,51 +350,70 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
                   );
                 })
               )}
-            </View>
-          </ScrollView>
-          <Pagination
-            page={pagination.page}
-            pages={pagination.pages}
-            total={pagination.total}
-            onPage={(pg) => { setPage(pg); fetchAssignments(pg); }}
-          />
-        </View>
-      )}
+            </ScrollView>
+
+            {/* Pagination pinned to bottom */}
+            <Pagination
+              page={pagination.page}
+              pages={pagination.pages}
+              total={pagination.total}
+              onPage={(pg) => { setPage(pg); fetchAssignments(pg); }}
+            />
+          </View>
+        )}
+      </View>
     </AppShell>
   );
 }
 
 const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const PAD = globalWidth('1.3%');
 
 const styles = StyleSheet.create({
+  /* Full-screen container */
+  screen: {
+    flex: 1,
+    flexDirection: 'column',
+    overflow: Platform.OS === 'web' ? 'hidden' : undefined,
+  },
+
+  /* Padded top area */
+  topSection: {
+    paddingHorizontal: PAD,
+    paddingTop: PAD,
+    paddingBottom: globalHeight('0.6%'),
+    backgroundColor: colors.backgroundColor,
+    zIndex: 30,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
   pageHeader: {
     flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
-    marginBottom: globalHeight('1.2%'), flexWrap: 'wrap', gap: 12,
+    marginBottom: globalHeight('0.8%'), flexWrap: 'wrap', gap: 12,
   },
   pageTitle: { fontSize: 20, fontWeight: '800', color: colors.textPrimary },
   pageSubtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
   headerActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
 
   filtersRow: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center',
-    marginBottom: globalHeight('1.2%'), zIndex: 20,
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center', zIndex: 20,
   },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderWidth: 1, borderColor: colors.border, borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 8, backgroundColor: colors.surface,
-    minWidth: 220,
+    paddingHorizontal: 10, paddingVertical: 7, backgroundColor: colors.surface,
+    minWidth: 200,
   },
   searchInput: { flex: 1, fontSize: 13, color: colors.textPrimary, outlineStyle: 'none' },
 
   filterBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     borderWidth: 1, borderColor: colors.border, borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.surface, maxWidth: 160,
+    paddingHorizontal: 10, paddingVertical: 7, backgroundColor: colors.surface, maxWidth: 150,
   },
-  filterBtnText: { fontSize: 13, color: colors.textPrimary, fontWeight: '600', flex: 1 },
+  filterBtnText: { fontSize: 12, color: colors.textPrimary, fontWeight: '600', flex: 1 },
   filterDropdown: {
-    position: 'absolute', top: 40, left: 0, minWidth: 160,
+    position: 'absolute', top: 38, left: 0, minWidth: 160,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: 8, ...shadow, zIndex: 100,
   },
@@ -398,42 +421,55 @@ const styles = StyleSheet.create({
   filterOptActive: { backgroundColor: colors.primary + '15' },
   filterOptText: { fontSize: 13, color: colors.textPrimary },
   filterOptTextActive: { color: colors.primary, fontWeight: '700' },
-  clearBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.backgroundColor },
-  clearBtnText: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
+  clearBtn: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, backgroundColor: colors.backgroundColor },
+  clearBtnText: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
 
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 40 },
-  errorText: { fontSize: 14, color: colors.danger },
-
-  tableCard: {
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 10, overflow: 'hidden', ...shadow,
+  /* Table fills remaining */
+  tableContainer: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    overflow: Platform.OS === 'web' ? 'hidden' : undefined,
   },
   tableHead: {
-    flexDirection: 'row', backgroundColor: colors.backgroundColor,
-    paddingHorizontal: 16, paddingVertical: 10, gap: 8,
+    flexDirection: 'row',
+    backgroundColor: colors.primary + '0C',
+    paddingHorizontal: PAD,
+    paddingVertical: 11,
+    borderBottomWidth: 1.5,
+    borderBottomColor: colors.primary + '30',
   },
-  th: { flex: 1, fontSize: 11, fontWeight: '800', color: colors.textSecondary, minWidth: 80 },
+  th: { flex: 1, fontSize: 11, fontWeight: '800', color: colors.primary, minWidth: 80 },
+  thRight: { textAlign: 'right' },
+
   tableRow: {
-    flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12,
-    borderTopWidth: 1, borderTopColor: colors.border, alignItems: 'center', gap: 8,
+    flexDirection: 'row',
+    paddingHorizontal: PAD,
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    alignItems: 'center',
   },
   td: { flex: 1, fontSize: 13, color: colors.textPrimary, minWidth: 80 },
   tdProduct: { flex: 1, minWidth: 100 },
   tdProductName: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
   tdProductNick: { fontSize: 11, color: colors.textMuted, fontWeight: '700', marginTop: 1 },
-  tdActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 4 },
+  tdActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 2 },
 
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, alignSelf: 'flex-start' },
   badgeText: { fontSize: 11, fontWeight: '700' },
+  actionBtn: { padding: 7, borderRadius: 6 },
 
-  actionBtn: { padding: 6, borderRadius: 6 },
-
-  emptyRow: { padding: 32, alignItems: 'center' },
+  emptyRow: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 60 },
   emptyRowText: { fontSize: 14, color: colors.textMuted },
+
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 40 },
+  errorText: { fontSize: 14, color: colors.danger },
 
   pagination: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 12, borderTopWidth: 1, borderTopColor: colors.border,
+    paddingHorizontal: PAD, paddingVertical: 10,
+    borderTopWidth: 1, borderTopColor: colors.border,
+    backgroundColor: colors.surface,
   },
   paginationInfo: { fontSize: 12, color: colors.textSecondary },
   paginationBtns: { flexDirection: 'row', gap: 4 },
