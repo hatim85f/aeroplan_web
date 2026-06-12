@@ -2,7 +2,9 @@ import { apiRequest } from '../apiClient';
 
 export const getLines = async (token) => {
   const result = await apiRequest('/lines', { token });
-  return result?.data || result?.lines || result || [];
+  // Handle: { data: [...] }, { lines: [...] }, or bare array
+  const raw = result?.data || result?.lines || result;
+  return Array.isArray(raw) ? raw : [];
 };
 
 export const getLineById = async (token, lineId) => {

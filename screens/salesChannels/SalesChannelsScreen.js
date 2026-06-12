@@ -111,6 +111,9 @@ export default function SalesChannelsScreen({ navigation, userDetails, appMetada
   const token = userDetails?.token || userDetails?.data?.token || '';
   const role = user.role || '';
   const managerRole = isManager(role);
+  // Only admin/manager can create or edit channels; senior managers get a read-only view.
+  const canEdit = ['admin', 'manager'].includes(String(role).toLowerCase());
+  const viewerOnly = managerRole && !canEdit;
 
   const [channels, setChannels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -183,7 +186,7 @@ export default function SalesChannelsScreen({ navigation, userDetails, appMetada
             Manage channels used for product pricing and FOC configuration
           </Text>
         </View>
-        {managerRole && (
+        {canEdit && (
           <Pressable
             style={styles.btnPrimary}
             onPress={() => navigation.navigate('SalesChannelForm', { mode: 'create' })}
@@ -193,6 +196,15 @@ export default function SalesChannelsScreen({ navigation, userDetails, appMetada
           </Pressable>
         )}
       </View>
+
+      {viewerOnly && (
+        <View style={styles.readOnlyBanner}>
+          <Ionicons name="eye-outline" size={15} color={colors.textSecondary} />
+          <Text style={styles.readOnlyBannerText}>
+            View-only — sales channels are managed by line managers. You can review them but not create or edit.
+          </Text>
+        </View>
+      )}
 
       {/* Stats row */}
       <View style={styles.statsRow}>
@@ -264,7 +276,7 @@ export default function SalesChannelsScreen({ navigation, userDetails, appMetada
             <Text style={styles.emptyText}>
               {channels.length === 0 ? 'No sales channels yet.' : 'No channels match your search.'}
             </Text>
-            {managerRole && channels.length === 0 && (
+            {canEdit && channels.length === 0 && (
               <Pressable
                 style={styles.btnPrimary}
                 onPress={() => navigation.navigate('SalesChannelForm', { mode: 'create' })}
@@ -306,16 +318,21 @@ export default function SalesChannelsScreen({ navigation, userDetails, appMetada
                   <StatusBadge active={active} />
                 </View>
 
-                {/* Created At */}
+                {/* Created At + creator */}
                 <View style={[styles.td, { flex: 1.5 }]}>
                   <Text style={styles.cellSub}>
                     {ch.createdAt ? moment(ch.createdAt).format('DD/MM/YYYY') : '—'}
                   </Text>
+                  {(ch.createdByName || ch.createdBy?.fullName || ch.createdBy?.name) ? (
+                    <Text style={styles.cellSub} numberOfLines={1}>
+                      by {ch.createdByName || ch.createdBy?.fullName || ch.createdBy?.name}
+                    </Text>
+                  ) : null}
                 </View>
 
                 {/* Actions */}
                 <View style={[styles.td, { flex: 1, flexDirection: 'row', gap: 4, alignItems: 'center' }]}>
-                  {managerRole ? (
+                  {canEdit ? (
                     <>
                       <Pressable
                         style={styles.actionIcon}
@@ -365,6 +382,8 @@ const styles = StyleSheet.create({
   },
   pageTitle: { fontSize: globalWidth('1.15%'), fontWeight: '800', color: colors.textPrimary },
   pageSubtitle: { fontSize: globalWidth('0.65%'), color: colors.textSecondary, marginTop: 3 },
+  readOnlyBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.backgroundColor, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9, marginBottom: 10 },
+  readOnlyBannerText: { flex: 1, fontSize: globalWidth('0.62%'), color: colors.textSecondary, fontWeight: '600' },
 
   statsRow: { flexDirection: 'row', gap: globalWidth('1%'), marginBottom: globalHeight('1.5%'), flexWrap: 'wrap' },
   statCard: {

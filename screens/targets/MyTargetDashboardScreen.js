@@ -24,8 +24,6 @@ const TARGET_BASIS_LABELS = {
 
 const STATUS_STYLE = {
   active:   { bg: '#DCFCE7', text: '#15803D' },
-  upcoming: { bg: '#FFF7ED', text: '#C2410C' },
-  expired:  { bg: '#F1F5F9', text: '#64748B' },
   inactive: { bg: '#F1F5F9', text: '#64748B' },
 };
 
@@ -228,7 +226,7 @@ export default function MyTargetDashboardScreen({ navigation, userDetails, appMe
         listTargetPhasing(token, { year }),
       ]);
       const sorted = [...aRes.assignments].sort((a, b) => {
-        const order = { active: 0, upcoming: 1, expired: 2, inactive: 3 };
+        const order = { active: 0, inactive: 1 };
         return (order[a.status] ?? 9) - (order[b.status] ?? 9);
       });
       setAssignments(sorted);
@@ -243,10 +241,9 @@ export default function MyTargetDashboardScreen({ navigation, userDetails, appMe
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const activeList   = assignments.filter((a) => a.status === 'active');
-  const upcomingList = assignments.filter((a) => a.status === 'upcoming');
-  const expiredList  = assignments.filter((a) => !['active', 'upcoming'].includes(a.status));
+  const inactiveList = assignments.filter((a) => a.status !== 'active');
 
-  const [showExpired, setShowExpired] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
 
   const yearOpts = [THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1].map((y) => String(y));
 
@@ -314,41 +311,17 @@ export default function MyTargetDashboardScreen({ navigation, userDetails, appMe
             </View>
           )}
 
-          {/* Upcoming */}
-          {upcomingList.length > 0 && (
+          {/* Inactive collapsed */}
+          {inactiveList.length > 0 && (
             <View style={styles.group}>
-              <View style={styles.groupHeader}>
-                <View style={[styles.groupDot, { backgroundColor: '#C2410C' }]} />
-                <Text style={styles.groupTitle}>Upcoming Targets ({upcomingList.length})</Text>
-              </View>
-              <View style={styles.cardGrid}>
-                {upcomingList.map((a) => (
-                  <TargetCard
-                    key={a._id || a.id}
-                    assignment={a}
-                    onPress={() => navigation.navigate('TargetAssignmentDetails', { assignmentId: a._id || a.id })}
-                    onViewBreakdown={() => setActiveBreakdown({
-                      ...a,
-                      _id: a._id || a.id,
-                      _fetchBreakdown: fetchBreakdown,
-                    })}
-                  />
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Expired collapsed */}
-          {expiredList.length > 0 && (
-            <View style={styles.group}>
-              <Pressable style={styles.groupHeader} onPress={() => setShowExpired((v) => !v)}>
+              <Pressable style={styles.groupHeader} onPress={() => setShowInactive((v) => !v)}>
                 <View style={[styles.groupDot, { backgroundColor: '#94A3B8' }]} />
-                <Text style={styles.groupTitle}>Expired / History ({expiredList.length})</Text>
-                <Ionicons name={showExpired ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+                <Text style={styles.groupTitle}>Inactive Targets ({inactiveList.length})</Text>
+                <Ionicons name={showInactive ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
               </Pressable>
-              {showExpired && (
+              {showInactive && (
                 <View style={styles.cardGrid}>
-                  {expiredList.map((a) => (
+                  {inactiveList.map((a) => (
                     <TargetCard
                       key={a._id || a.id}
                       assignment={a}

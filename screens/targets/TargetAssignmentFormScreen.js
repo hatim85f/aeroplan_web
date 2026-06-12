@@ -8,7 +8,7 @@ import AppShell from '../../components/AppShell';
 import { colors } from '../../constants/colors';
 import { globalHeight, globalWidth } from '../../constants/globalWidth';
 import {
-  createTargetAssignment,
+  createTargetFromProductAssignments,
   getTargetAssignmentById,
   updateTargetAssignment,
 } from '../../store/targets/targetAssignmentActions';
@@ -223,6 +223,7 @@ export default function TargetAssignmentFormScreen({
   const [productId,       setProductId]       = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [year,            setYear]            = useState(String(THIS_YEAR));
+  const [status,          setStatus]          = useState('active');
   const [channelUnits,    setChannelUnits]    = useState({});   // { [channelId]: string }
 
   /* Load products + channels (for name lookup) */
@@ -261,6 +262,7 @@ export default function TargetAssignmentFormScreen({
         const pid   = typeof prod === 'string' ? prod : (prod._id || prod.productId || '');
         setProductId(pid);
         setYear(String(data.year || THIS_YEAR));
+        setStatus(data.status === 'inactive' ? 'inactive' : 'active');
 
         /* prefill channel units from channelTargets or single channelId */
         if (Array.isArray(data.channelTargets) && data.channelTargets.length > 0) {
@@ -303,6 +305,7 @@ export default function TargetAssignmentFormScreen({
     const errs = {};
     if (!productId)     errs.productId = 'Product is required';
     if (!year)          errs.year      = 'Year is required';
+    if (!['active', 'inactive'].includes(status)) errs.status = 'Status is required';
     if (totals.count === 0) errs.channels = 'Enter target units for at least one channel';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -327,6 +330,7 @@ export default function TargetAssignmentFormScreen({
       const payload = {
         productId,
         year:           Number(year),
+        status,
         channelTargets,
       };
 
@@ -334,7 +338,7 @@ export default function TargetAssignmentFormScreen({
         await updateTargetAssignment(token, assignmentId, payload);
         setSaveMessage('Target assignment updated.');
       } else {
-        await createTargetAssignment(token, payload);
+        await createTargetFromProductAssignments(token, payload);
         setSaveMessage(isDuplicate ? 'Assignment duplicated.' : 'Target assignment created.');
       }
       setTimeout(() => navigation.navigate('TargetAssignments'), 900);
@@ -384,7 +388,7 @@ export default function TargetAssignmentFormScreen({
             Select a product and enter target units per channel. Values are calculated automatically from channel pricing.
           </Text>
 
-          {/* Top row: product + year side by side */}
+          {/* Top row: product + year + status */}
           <View style={styles.topRow}>
             <View style={[styles.topField, { zIndex: 50 }]}>
               <Text style={styles.fieldLabel}>Product <Text style={styles.required}>*</Text></Text>
@@ -399,6 +403,23 @@ export default function TargetAssignmentFormScreen({
               <Text style={styles.fieldLabel}>Year <Text style={styles.required}>*</Text></Text>
               <YearDropdown value={year} onChange={setYear} />
               {errors.year ? <Text style={styles.fieldError}>{errors.year}</Text> : null}
+            </View>
+            <View style={[styles.topField, { maxWidth: 180, zIndex: 30 }]}>
+              <Text style={styles.fieldLabel}>Status <Text style={styles.required}>*</Text></Text>
+              <View style={styles.statusButtons}>
+                {['active', 'inactive'].map((s) => (
+                  <Pressable
+                    key={s}
+                    style={[styles.statusBtn, status === s && styles.statusBtnActive]}
+                    onPress={() => setStatus(s)}
+                  >
+                    <Text style={[styles.statusBtnText, status === s && styles.statusBtnTextActive]}>
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              {errors.status ? <Text style={styles.fieldError}>{errors.status}</Text> : null}
             </View>
           </View>
 
@@ -502,6 +523,15 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
   required: { color: colors.danger },
   fieldError: { fontSize: 12, color: colors.danger, marginTop: 2 },
+  statusButtons: { flexDirection: 'row', gap: 8 },
+  statusBtn: {
+    flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 8,
+    height: 40, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  statusBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  statusBtnText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
+  statusBtnTextActive: { color: colors.white },
 
   input: {
     borderWidth: 1, borderColor: colors.border, borderRadius: 8,

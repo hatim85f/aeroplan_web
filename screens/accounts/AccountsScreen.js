@@ -277,7 +277,7 @@ export default function AccountsScreen({ navigation, userDetails, appMetadata, o
           <Text style={[styles.th, { flex: 2.5 }]}>Account Name</Text>
           <Text style={[styles.th, { flex: 1.5 }]}>Account Type</Text>
           <Text style={[styles.th, { flex: 2 }]}>City, Address</Text>
-          <Text style={[styles.th, { flex: 2 }]}>Account Owner</Text>
+          <Text style={[styles.th, { flex: 2 }]}>Account Handler</Text>
           <Text style={[styles.th, { flex: 1.5 }]}>Last Planned Visit</Text>
           <Text style={[styles.th, { flex: 1 }]}>Status</Text>
           <Text style={[styles.th, { flex: 1 }]}>Actions</Text>

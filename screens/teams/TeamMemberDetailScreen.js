@@ -34,6 +34,17 @@ function getInitials(name = '') {
   return '?';
 }
 
+const getAccountabilityPercentage = (assignment) =>
+  assignment?.accountabilityPercentage ?? assignment?.percentage ?? 100;
+
+const getAssignmentProductName = (assignment) =>
+  typeof assignment?.productId === 'object'
+    ? (assignment.productId?.productName || assignment.productId?.name || '—')
+    : (assignment?.productName || assignment?.product?.productName || assignment?.product?.name || '—');
+
+const sortAssignmentsByProduct = (items = []) =>
+  [...items].sort((a, b) => getAssignmentProductName(a).localeCompare(getAssignmentProductName(b)));
+
 /* ── shared UI ───────────────────────────────────────────────────────────── */
 function InfoRow({ label, value, mono }) {
   return (
@@ -84,6 +95,7 @@ function DatePicker({ value, onChange }) {
 function EditAssignmentModal({ visible, assignment, token, onClose, onSaved }) {
   const [startDate, setStartDate] = useState('');
   const [endDate,   setEndDate]   = useState('');
+  const [percentage, setPercentage] = useState('100');
   const [notes,     setNotes]     = useState('');
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState('');
@@ -92,18 +104,24 @@ function EditAssignmentModal({ visible, assignment, token, onClose, onSaved }) {
     if (!assignment) return;
     setStartDate(assignment.startDate ? assignment.startDate.slice(0, 10) : '');
     setEndDate(assignment.endDate   ? assignment.endDate.slice(0, 10)   : '');
+    setPercentage(String(getAccountabilityPercentage(assignment)));
     setNotes(assignment.notes || '');
     setError('');
   }, [assignment]);
 
   const handleSave = async () => {
     if (!startDate) { setError('Start date is required.'); return; }
+    const pct = Number(percentage);
+    if (percentage === '' || isNaN(pct) || pct < 0 || pct > 100) {
+      setError('Accountability percentage must be between 0 and 100.');
+      return;
+    }
     setSaving(true); setError('');
     try {
       await updateMedicalRepProductAssignment(
         token,
         assignment._id || assignment.id,
-        { startDate, endDate: endDate || undefined, notes: notes || undefined },
+        { startDate, endDate: endDate || undefined, accountabilityPercentage: pct, notes: notes || undefined },
       );
       onSaved();
     } catch (e) {
@@ -130,6 +148,17 @@ function EditAssignmentModal({ visible, assignment, token, onClose, onSaved }) {
 
           <Text style={[styles.fieldLabel, { marginTop: 14 }]}>End Date (optional)</Text>
           <DatePicker value={endDate} onChange={setEndDate} />
+
+          <Text style={[styles.fieldLabel, { marginTop: 14 }]}>
+            Accountability % <Text style={{ color: colors.danger }}>*</Text>
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={percentage}
+            onChangeText={setPercentage}
+            placeholder="100"
+            keyboardType="numeric"
+          />
 
           <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Notes (optional)</Text>
           <TextInput
@@ -185,6 +214,7 @@ function ProductsTab({ token, medicalRepId, isActive, managerRole }) {
 
   /* form fields */
   const [selected,  setSelected]  = useState([]);
+  const [selectedPercentages, setSelectedPercentages] = useState({});
   const [startDate, setStartDate] = useState('');
   const [endDate,   setEndDate]   = useState('');
   const [notes,     setNotes]     = useState('');
@@ -201,7 +231,7 @@ function ProductsTab({ token, medicalRepId, isActive, managerRole }) {
     setLoading(true); setListError('');
     try {
       const data = await getMedicalRepProductAssignments(token, medicalRepId);
-      setAssignments(Array.isArray(data) ? data : []);
+      setAssignments(sortAssignmentsByProduct(Array.isArray(data) ? data : []));
     } catch (e) {
       setListError(e.message || 'Failed to load assignments.');
     } finally {
@@ -224,21 +254,32 @@ function ProductsTab({ token, medicalRepId, isActive, managerRole }) {
   /* ── product selection ── */
   const toggleProduct = (p) => {
     const pid = p._id || p.id;
-    setSelected((prev) =>
-      prev.some((s) => (s._id || s.id) === pid)
-        ? prev.filter((s) => (s._id || s.id) !== pid)
-        : [...prev, p],
-    );
+    setSelected((prev) => {
+      const exists = prev.some((s) => (s._id || s.id) === pid);
+      if (exists) {
+        setSelectedPercentages((curr) => {
+          const next = { ...curr };
+          delete next[pid];
+          return next;
+        });
+        return prev.filter((s) => (s._id || s.id) !== pid);
+      }
+      setSelectedPercentages((curr) => ({ ...curr, [pid]: curr[pid] ?? '100' }));
+      return [...prev, p];
+    });
   };
 
-  const filteredProducts = allProducts.filter((p) => {
-    if (!filterText.trim()) return true;
-    return (p.productName || p.name || '').toLowerCase().includes(filterText.toLowerCase());
-  });
+  const filteredProducts = allProducts
+    .filter((p) => {
+      if (!filterText.trim()) return true;
+      return (p.productName || p.name || '').toLowerCase().includes(filterText.toLowerCase());
+    })
+    .sort((a, b) => (a.productName || a.name || '').localeCompare(b.productName || b.name || ''));
 
   /* ── form reset / toggle ── */
   const resetForm = () => {
     setSelected([]); setStartDate(''); setEndDate('');
+    setSelectedPercentages({});
     setNotes(''); setFormError(''); setFilterText('');
   };
 
@@ -254,14 +295,23 @@ function ProductsTab({ token, medicalRepId, isActive, managerRole }) {
 
     if (!medicalRepId) { setFormError('No medical rep ID — cannot assign.'); return; }
 
-    const productIds = selected.map((p) => p._id || p.id).filter(Boolean);
-    if (productIds.length === 0) { setFormError('Could not resolve product IDs.'); return; }
+    const productsPayload = selected.map((p) => {
+      const productId = p._id || p.id;
+      return { productId, percentage: Number(selectedPercentages[productId] ?? 100) };
+    });
+    const invalidPct = productsPayload.some((p) =>
+      !p.productId || isNaN(p.percentage) || p.percentage < 0 || p.percentage > 100
+    );
+    if (invalidPct) {
+      setFormError('Each selected product needs an accountability percentage between 0 and 100.');
+      return;
+    }
 
     setAssigning(true); setFormError('');
     try {
       await createMedicalRepProductAssignment(token, {
         medicalRepId,
-        productIds,
+        products: productsPayload,
         startDate,
         endDate:  endDate  || undefined,
         notes:    notes    || undefined,
@@ -403,12 +453,28 @@ function ProductsTab({ token, medicalRepId, isActive, managerRole }) {
                         >
                           {p.productName || p.name}
                         </Text>
+                        {checked ? (
+                          <View style={styles.percentInlineWrap}>
+                            <TextInput
+                              style={styles.percentInlineInput}
+                              value={selectedPercentages[pid] ?? '100'}
+                              onChangeText={(text) => setSelectedPercentages((prev) => ({ ...prev, [pid]: text }))}
+                              placeholder="100"
+                              keyboardType="numeric"
+                            />
+                            <Text style={styles.percentInlineSuffix}>%</Text>
+                          </View>
+                        ) : null}
                       </Pressable>
                     );
                   })}
                 </ScrollView>
               )}
             </View>
+
+            <Text style={styles.helpText}>
+              For the same product and period, accountability across reps should total 100%.
+            </Text>
 
             <View style={styles.dateRow}>
               <View style={styles.dateField}>
@@ -483,6 +549,9 @@ function ProductsTab({ token, medicalRepId, isActive, managerRole }) {
                   <Text style={styles.assignDates}>
                     {fmtShortDate(a.startDate)} → {fmtShortDate(a.endDate)}
                   </Text>
+                  <View style={styles.percentBadge}>
+                    <Text style={styles.percentBadgeText}>{getAccountabilityPercentage(a)}%</Text>
+                  </View>
                   {a.notes ? <Text style={styles.assignNotes}>{a.notes}</Text> : null}
                 </View>
                 {managerRole && (
@@ -688,6 +757,7 @@ const styles = StyleSheet.create({
   formSubmitRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 },
   formError:     { fontSize: 12, color: colors.danger, marginTop: 8, fontWeight: '600' },
   fieldLabel:    { fontSize: 12, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 },
+  helpText:      { fontSize: 12, color: colors.textMuted, marginTop: 8 },
 
   filterRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 10, height: 40, backgroundColor: colors.inputBackground, marginBottom: 8 },
   filterInput:{ flex: 1, fontSize: 13, color: colors.textPrimary, outlineStyle: 'none' },
@@ -699,6 +769,9 @@ const styles = StyleSheet.create({
   productRowChecked:    { backgroundColor: '#F0F7FF' },
   productRowText:       { flex: 1, fontSize: 13, color: colors.textPrimary },
   productRowTextChecked:{ color: colors.primary, fontWeight: '700' },
+  percentInlineWrap:    { flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: 8 },
+  percentInlineInput:   { width: 58, height: 30, borderWidth: 1, borderColor: colors.border, borderRadius: 6, paddingHorizontal: 8, fontSize: 12, color: colors.textPrimary, backgroundColor: colors.surface, outlineStyle: 'none', textAlign: 'right' },
+  percentInlineSuffix:  { fontSize: 12, color: colors.textSecondary, fontWeight: '700' },
   checkbox:             { width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   checkboxChecked:      { backgroundColor: colors.primary, borderColor: colors.primary },
 
@@ -714,6 +787,8 @@ const styles = StyleSheet.create({
   assignIcon:        { width: 32, height: 32, borderRadius: 8, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 },
   assignProductName: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
   assignDates:       { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
+  percentBadge:      { alignSelf: 'flex-start', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: colors.primary + '12', marginTop: 4 },
+  percentBadgeText:  { fontSize: 11, color: colors.primary, fontWeight: '800' },
   assignNotes:       { fontSize: 11, color: colors.textMuted, marginTop: 3, fontStyle: 'italic' },
   editBtn:           { width: 30, height: 30, borderRadius: 7, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
 

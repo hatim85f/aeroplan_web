@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
@@ -24,9 +24,12 @@ const THIS_YEAR = new Date().getFullYear();
 
 const STATUS_STYLE = {
   active:   { bg: '#DCFCE7', text: '#15803D' },
-  upcoming: { bg: '#FFF7ED', text: '#C2410C' },
-  expired:  { bg: '#F1F5F9', text: '#64748B' },
   inactive: { bg: '#F1F5F9', text: '#64748B' },
+};
+
+const getAssignmentProductName = (assignment = {}) => {
+  const product = assignment.productId || {};
+  return product.productName || product.name || assignment.productName || '';
 };
 
 function StatusBadge({ status }) {
@@ -122,6 +125,9 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
   const [products, setProducts] = useState([]);
   const [channels, setChannels] = useState([]);
 
+  const [sortOrder, setSortOrder] = useState(null); // null | 'asc' | 'desc'
+  const sortOrderRef = useRef(null); // mirrors sortOrder, readable synchronously inside callbacks
+
   const [deletingId, setDeletingId] = useState('');
   const [togglingId, setTogglingId] = useState('');
 
@@ -143,7 +149,9 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
     setLoading(true);
     setError('');
     try {
-      const params = { page: pg, limit: 20 };
+      const so = sortOrderRef.current; // always the latest value, no stale closure
+      const isSorting = so !== null;
+      const params = isSorting ? { page: 1, limit: 9999 } : { page: pg, limit: 20 };
       if (filterYear)    params.year      = filterYear;
       if (filterRep)     params.userId    = filterRep;
       if (filterProduct) params.productId = filterProduct;
@@ -152,20 +160,30 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
       if (search.trim()) params.search    = search.trim();
       const res = await listTargetAssignments(token, params);
       setAssignments(res.assignments);
-      setPagination(res.pagination);
+      setPagination(isSorting
+        ? { page: 1, limit: res.assignments.length, total: res.assignments.length, pages: 1 }
+        : res.pagination);
     } catch (e) {
       setError(e.message || 'Failed to load assignments');
     } finally {
       setLoading(false);
     }
   }, [token, filterYear, filterRep, filterProduct, filterChannel, filterStatus, search]);
+  // sortOrder intentionally omitted — read via sortOrderRef.current to avoid stale closure
 
-  useEffect(() => { setPage(1); fetchAssignments(1); }, [filterYear, filterRep, filterProduct, filterChannel, filterStatus]);
+  useEffect(() => { setPage(1); fetchAssignments(1); }, [filterYear, filterRep, filterProduct, filterChannel, filterStatus, fetchAssignments]);
+
+  // sortOrder change: update ref first (synchronous), then refetch
+  useEffect(() => {
+    sortOrderRef.current = sortOrder;
+    setPage(1);
+    fetchAssignments(1);
+  }, [sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const t = setTimeout(() => { setPage(1); fetchAssignments(1); }, 350);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToggleStatus = async (a) => {
     const id = a._id || a.id;
@@ -208,8 +226,6 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
   const statOpts  = [
     { value: '', label: 'All Status' },
     { value: 'active', label: 'Active' },
-    { value: 'upcoming', label: 'Upcoming' },
-    { value: 'expired', label: 'Expired' },
     { value: 'inactive', label: 'Inactive' },
   ];
   const yearOpts = [{ value: '', label: 'All Years' }, ...[THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1].map((y) => ({ value: String(y), label: String(y) }))];
@@ -234,6 +250,20 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
     const sym = cur === 'AED' ? 'AED ' : '$';
     return `${sym}${Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
   };
+
+  const sortedAssignments = useMemo(() => {
+    if (!sortOrder) return assignments;
+    return [...assignments].sort((a, b) => {
+      const nameA = getAssignmentProductName(a);
+      const nameB = getAssignmentProductName(b);
+      return sortOrder === 'asc'
+        ? nameA.localeCompare(nameB, undefined, { sensitivity: 'base' })
+        : nameB.localeCompare(nameA, undefined, { sensitivity: 'base' });
+    });
+  }, [assignments, sortOrder]);
+
+  const handleSortAZ  = () => setSortOrder((prev) => prev === 'asc'  ? null : 'asc');
+  const handleSortZA  = () => setSortOrder((prev) => prev === 'desc' ? null : 'desc');
 
   const COL_HEADS = ['Medical Rep', 'Product', 'Channel', 'Start', 'End', 'Units', 'Value', 'Currency', 'Status', 'Actions'];
 
@@ -284,10 +314,10 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
               <Text style={[styles.statPillValue, { color: '#15803D' }]}>{activeCount ?? '—'}</Text>
             </View>
             {byChannel.map((ch, i) => (
-              <React.Fragment key={ch.channelId || i}>
+              <React.Fragment key={ch.id || i}>
                 <View style={styles.statDivider} />
                 <View style={styles.statPill}>
-                  <Text style={styles.statPillLabel}>{ch.channelName || ch.channelKey || 'Channel'}</Text>
+                  <Text style={styles.statPillLabel}>{ch.name || 'Channel'}</Text>
                   <Text style={styles.statPillValue}>{fmtCompact(ch.totalTargetValue)}</Text>
                 </View>
               </React.Fragment>
@@ -320,6 +350,20 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
                 <Text style={styles.clearBtnText}>Clear</Text>
               </Pressable>
             )}
+            <Pressable
+              style={[styles.sortBtn, sortOrder === 'asc' && styles.sortBtnActive]}
+              onPress={handleSortAZ}
+            >
+              <Ionicons name="arrow-up-outline" size={13} color={sortOrder === 'asc' ? colors.primary : colors.textSecondary} />
+              <Text style={[styles.sortBtnText, sortOrder === 'asc' && styles.sortBtnTextActive]}>A → Z</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.sortBtn, sortOrder === 'desc' && styles.sortBtnActive]}
+              onPress={handleSortZA}
+            >
+              <Ionicons name="arrow-down-outline" size={13} color={sortOrder === 'desc' ? colors.primary : colors.textSecondary} />
+              <Text style={[styles.sortBtnText, sortOrder === 'desc' && styles.sortBtnTextActive]}>Z → A</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -348,19 +392,19 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ flexGrow: 1 }}
             >
-              {assignments.length === 0 ? (
+              {sortedAssignments.length === 0 ? (
                 <View style={styles.emptyRow}>
                   <Ionicons name="flag-outline" size={28} color={colors.textMuted} />
                   <Text style={styles.emptyRowText}>No target assignments found</Text>
                 </View>
               ) : (
-                assignments.map((a) => {
+                sortedAssignments.map((a) => {
                   const id      = a._id || a.id;
                   const product = a.productId || {};
                   const channel = a.channelId || {};
                   const repUser = a.userId || a.repId || {};
                   const repName = repUser.fullName || repUser.name || repUser.email || a.repName || '—';
-                  const pName   = product.productName || product.name || a.productName || '—';
+                  const pName   = getAssignmentProductName(a) || '—';
                   const pNick   = product.productNickname || a.productNickname || '';
                   const chName  = channel.channelName || channel.channelKey || a.channelName || '—';
                   const currency = a.currency || 'USD';
@@ -405,13 +449,15 @@ export default function TargetAssignmentsScreen({ navigation, userDetails, appMe
               )}
             </ScrollView>
 
-            {/* Pagination pinned to bottom */}
-            <Pagination
-              page={pagination.page}
-              pages={pagination.pages}
-              total={pagination.total}
-              onPage={(pg) => { setPage(pg); fetchAssignments(pg); }}
-            />
+            {/* Pagination pinned to bottom — hidden when sort is active (all data loaded) */}
+            {!sortOrder && (
+              <Pagination
+                page={pagination.page}
+                pages={pagination.pages}
+                total={pagination.total}
+                onPage={(pg) => { setPage(pg); fetchAssignments(pg); }}
+              />
+            )}
           </View>
         )}
       </View>
@@ -554,4 +600,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: 8,
   },
   btnOutlineText: { color: colors.primary, fontSize: 13, fontWeight: '700' },
+
+  sortBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7, backgroundColor: colors.surface,
+  },
+  sortBtnActive: { borderColor: colors.primary, backgroundColor: colors.primary + '10' },
+  sortBtnText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+  sortBtnTextActive: { color: colors.primary },
 });

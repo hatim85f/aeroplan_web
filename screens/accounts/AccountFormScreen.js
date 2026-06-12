@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -9,9 +9,23 @@ import { colors } from '../../constants/colors';
 import { globalHeight, globalWidth } from '../../constants/globalWidth';
 import { getAccountById, createAccount, updateAccount, bulkCreateAccounts } from '../../store/accounts/accountActions';
 import { getMyTeams, getTeamMembers } from '../../store/teams/teamsActions';
+import { listProducts } from '../../store/products/productActions';
+import { createFocOverrides } from '../../store/focOverrides/focOverrideActions';
+import { listSalesTeamMembers } from '../../store/salesTeam/salesTeamActions';
 
 const isManager = (role) =>
   ['admin', 'manager', 'senior_manager'].includes(String(role).toLowerCase());
+
+const BATCH_SIZE = 15;
+
+const BATCH_MESSAGES = [
+  'Preparing your accounts for upload... 🏥',
+  'Uploading accounts to the system...',
+  'Processing records carefully...',
+  'Your accounts are boarding the server...',
+  'Syncing data — almost there! 🚀',
+  'Crunching numbers and saving records...',
+];
 
 const ACCOUNT_TYPES = ['Clinic', 'Hospital', 'Healthcare', 'Pharmacy'];
 
@@ -187,6 +201,175 @@ function validateAndTransformRow(row, idx) {
   return { row: idx + 2, payload, errors };
 }
 
+/* ─── FOC date picker ────────────────────────────────────────────────────── */
+function FocDateInput({ value, onChange }) {
+  return (
+    <input
+      type="date"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        height: 40,
+        width: '100%',
+        borderWidth: 1,
+        borderStyle: 'solid',
+        borderColor: colors.border,
+        borderRadius: 8,
+        paddingLeft: 12,
+        paddingRight: 12,
+        fontSize: 13,
+        color: value ? colors.textPrimary : colors.textMuted,
+        backgroundColor: colors.surface,
+        fontFamily: 'inherit',
+        outline: 'none',
+        cursor: 'pointer',
+        boxSizing: 'border-box',
+      }}
+    />
+  );
+}
+
+/* ─── Product picker dropdown ────────────────────────────────────────────── */
+function ProductPickerDropdown({ value, products, loading, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const selected = products.find((p) => (p._id || p.productId) === value);
+  const label = selected
+    ? `${selected.productName}${selected.productNickname ? ` · ${selected.productNickname}` : ''}`
+    : 'Select a product…';
+
+  const filtered = search
+    ? products.filter(
+        (p) =>
+          (p.productName || '').toLowerCase().includes(search.toLowerCase()) ||
+          (p.productNickname || '').toLowerCase().includes(search.toLowerCase())
+      )
+    : products;
+
+  return (
+    <View>
+      {/* Trigger */}
+      <Pressable
+        style={[styles.input, loading && { opacity: 0.6 }]}
+        onPress={() => !loading && setOpen((v) => !v)}
+      >
+        {loading ? (
+          <ActivityIndicator size={12} color={colors.primary} />
+        ) : (
+          <Ionicons name="cube-outline" size={14} color={colors.textSecondary} />
+        )}
+        <Text
+          style={[styles.repDropLabel, !value && { color: colors.textMuted }]}
+          numberOfLines={1}
+        >
+          {loading ? 'Loading products…' : label}
+        </Text>
+        <Ionicons
+          name={open ? 'chevron-up' : 'chevron-down'}
+          size={13}
+          color={colors.textSecondary}
+        />
+      </Pressable>
+
+      {/* Inline list — renders in-flow so it never overlaps sibling fields */}
+      {open && !loading && (
+        <View style={styles.productDropdown}>
+          <View style={styles.productSearchRow}>
+            <Ionicons name="search-outline" size={13} color={colors.textMuted} />
+            <TextInput
+              style={styles.productSearchInput}
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search products…"
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+            />
+          </View>
+          <ScrollView
+            style={{ maxHeight: 200 }}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+          >
+            {filtered.length === 0 ? (
+              <View style={styles.dropOpt}>
+                <Text style={[styles.dropOptText, { color: colors.textMuted }]}>No products found</Text>
+              </View>
+            ) : (
+              filtered.slice(0, 60).map((p) => {
+                const pid = p._id || p.productId;
+                const sel = value === pid;
+                return (
+                  <Pressable
+                    key={pid}
+                    style={[styles.dropOpt, sel && styles.dropOptActive]}
+                    onPress={() => {
+                      onChange(pid);
+                      setOpen(false);
+                      setSearch('');
+                    }}
+                  >
+                    <Text
+                      style={[styles.dropOptText, sel && styles.dropOptTextActive]}
+                      numberOfLines={1}
+                    >
+                      {p.productName}
+                      {p.productNickname ? (
+                        <Text style={{ color: colors.textMuted }}>{`  ${p.productNickname}`}</Text>
+                      ) : null}
+                    </Text>
+                  </Pressable>
+                );
+              })
+            )}
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+}
+
+/* ─── Batch progress card ────────────────────────────────────────────────── */
+function BatchProgressCard({ batchProgress, spinValue }) {
+  const { sentBatches, totalBatches, sentAccounts, totalAccounts } = batchProgress;
+  const pct = totalAccounts > 0 ? sentAccounts / totalAccounts : 0;
+  const pctDisplay = Math.round(pct * 100);
+
+  const message =
+    sentBatches === 0
+      ? BATCH_MESSAGES[0]
+      : sentBatches >= totalBatches
+      ? 'Finalizing — almost done! 🎉'
+      : BATCH_MESSAGES[sentBatches % BATCH_MESSAGES.length];
+
+  const spin = spinValue.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
+  return (
+    <View style={styles.progressCard}>
+      <Animated.View style={{ transform: [{ rotate: spin }], marginBottom: 12 }}>
+        <Ionicons name="settings-outline" size={36} color={colors.primary} />
+      </Animated.View>
+      <Text style={styles.progressTitle}>Uploading Accounts…</Text>
+      <Text style={styles.progressMessage}>{message}</Text>
+      <View style={styles.progressBarTrack}>
+        <View style={[styles.progressBarFill, { width: `${pctDisplay}%` }]} />
+      </View>
+      <View style={styles.progressStatsRow}>
+        <Text style={styles.progressPct}>{pctDisplay}%</Text>
+        <Text style={styles.progressStats}>
+          {sentAccounts} / {totalAccounts} accounts
+          {totalBatches > 1 ? `  ·  Batch ${sentBatches} of ${totalBatches}` : ''}
+        </Text>
+      </View>
+      <View style={styles.progressWarningRow}>
+        <Ionicons name="lock-closed-outline" size={11} color={colors.textMuted} />
+        <Text style={styles.progressWarning}>Please don't close or refresh this page</Text>
+      </View>
+    </View>
+  );
+}
+
 /* ─── Main Screen ────────────────────────────────────────────────────────── */
 export default function AccountFormScreen({ navigation, route, userDetails, appMetadata, onSignOut }) {
   const mode = route?.params?.mode || 'create';
@@ -221,6 +404,98 @@ export default function AccountFormScreen({ navigation, route, userDetails, appM
   const [bulkParsing, setBulkParsing] = useState(false);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
+
+  // FOC Override state
+  const [showFocSection, setShowFocSection] = useState(false);
+  const [focStartDate, setFocStartDate] = useState('');   // applies to whole document
+  const [focEndDate, setFocEndDate] = useState('');       // applies to whole document
+  const [focEntries, setFocEntries] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [focSaveError, setFocSaveError] = useState('');
+
+  // Sales Team Assignment state
+  const [showSalesSection,   setShowSalesSection]   = useState(false);
+  const [salesTeamSearch,    setSalesTeamSearch]    = useState('');
+  const [salesTeamResults,   setSalesTeamResults]   = useState([]);
+  const [salesTeamLoading,   setSalesTeamLoading]   = useState(false);
+  const [salesTeamShowDrop,  setSalesTeamShowDrop]  = useState(false);
+  const [selectedSalesTeam,  setSelectedSalesTeam]  = useState([]); // array of { _id, fullName, position }
+
+  const loadProducts = () => {
+    if (products.length > 0 || productsLoading) return;
+    setProductsLoading(true);
+    listProducts(token, { limit: 200, status: 'active' })
+      .then(({ products: list }) => setProducts(Array.isArray(list) ? list : []))
+      .catch(() => {})
+      .finally(() => setProductsLoading(false));
+  };
+
+  const toggleFocSection = () => {
+    setShowFocSection((v) => {
+      if (!v) loadProducts();
+      return !v;
+    });
+  };
+
+  // Sales team search
+  useEffect(() => {
+    if (!showSalesSection) return;
+    if (!salesTeamSearch || salesTeamSearch.length < 2) { setSalesTeamResults([]); setSalesTeamShowDrop(false); return; }
+    let cancelled = false;
+    setSalesTeamLoading(true);
+    listSalesTeamMembers(token, { search: salesTeamSearch, page: 1, limit: 10, status: 'active', isActive: true })
+      .then((res) => {
+        if (!cancelled) {
+          setSalesTeamResults(res.data || []);
+          setSalesTeamShowDrop(true);
+        }
+      })
+      .catch(() => { if (!cancelled) setSalesTeamResults([]); })
+      .finally(() => { if (!cancelled) setSalesTeamLoading(false); });
+    return () => { cancelled = true; };
+  }, [salesTeamSearch, showSalesSection, token]);
+
+  const toggleSalesTeamMember = (member) => {
+    const id = member._id || member.id;
+    setSelectedSalesTeam((prev) =>
+      prev.some((m) => (m._id || m.id) === id)
+        ? prev.filter((m) => (m._id || m.id) !== id)
+        : [...prev, { _id: id, fullName: member.fullName || member.name || '', position: member.position || '', phone: member.phone || '', email: member.email || '' }]
+    );
+  };
+
+  const addFocEntry = () =>
+    setFocEntries((e) => [
+      ...e,
+      { productId: '', overridePercentage: '', notes: '' },
+    ]);
+
+  const removeFocEntry = (idx) =>
+    setFocEntries((e) => e.filter((_, i) => i !== idx));
+
+  const updateFocEntry = (idx, field, value) =>
+    setFocEntries((e) =>
+      e.map((entry, i) => (i === idx ? { ...entry, [field]: value } : entry))
+    );
+
+  // Batch progress
+  const [batchProgress, setBatchProgress] = useState(null);
+  const spinValue = useRef(new Animated.Value(0)).current;
+  const spinLoop = useRef(null);
+
+  const startSpin = () => {
+    spinValue.setValue(0);
+    spinLoop.current = Animated.loop(
+      Animated.timing(spinValue, { toValue: 1, duration: 1400, easing: Easing.linear, useNativeDriver: true })
+    );
+    spinLoop.current.start();
+  };
+
+  const stopSpin = () => {
+    spinLoop.current?.stop();
+    spinValue.setValue(0);
+  };
 
   const set = (key) => (val) => setForm((f) => ({ ...f, [key]: val }));
 
@@ -258,6 +533,13 @@ export default function AccountFormScreen({ navigation, route, userDetails, appM
           planId: data?.lastPlannedVisit?.planId || '',
           visitDate: data?.lastPlannedVisit?.date || '',
         });
+        // Prefill sales team
+        const st = (data?.salesTeamIds || data?.salesTeam || []).map((m) =>
+          typeof m === 'string'
+            ? { _id: m, fullName: m, position: '', phone: '', email: '' }
+            : { _id: m._id || m.id, fullName: m.fullName || m.name || '', position: m.position || '', phone: m.phone || '', email: m.email || '' }
+        );
+        if (st.length > 0) { setSelectedSalesTeam(st); setShowSalesSection(true); }
       })
       .catch((e) => setLoadError(e.message || 'Failed to load account'))
       .finally(() => setLoadingInit(false));
@@ -278,6 +560,7 @@ export default function AccountFormScreen({ navigation, route, userDetails, appM
     setSaving(true);
     setSaveError('');
     setSaveMessage('');
+    setFocSaveError('');
     try {
       const reps = managerRole ? form.assignedMedicalRepIds : [userId];
       const body = {
@@ -294,17 +577,65 @@ export default function AccountFormScreen({ navigation, route, userDetails, appM
         },
         userId: reps[0] || (managerRole ? '' : userId),
         assignedMedicalRepIds: reps,
+        // Always send salesTeamIds — empty array when all removed so backend clears the field
+        salesTeamIds: selectedSalesTeam.map((m) => m._id || m.id),
         ...(form.planId || form.visitDate ? {
           lastPlannedVisit: { planId: form.planId.trim(), date: form.visitDate.trim() },
         } : {}),
       };
+
+      // Create/update the account and capture the saved ID
+      let savedAccountId = accountId;
       if (isEdit) {
         await updateAccount(token, accountId, body);
-        setSaveMessage('Account updated successfully.');
       } else {
-        await createAccount(token, body);
-        setSaveMessage('Account created successfully.');
+        const created = await createAccount(token, body);
+        savedAccountId = created?._id || created?.id || created?.accountId;
       }
+
+      // FOC overrides — only sent if there are valid entries
+      const validFocEntries = focEntries.filter(
+        (e) => e.productId && e.overridePercentage !== ''
+      );
+
+      if (validFocEntries.length > 0 && savedAccountId) {
+        // Validate top-level dates (required for the whole document)
+        const accountSavedMsg = isEdit ? 'Account updated successfully.' : 'Account created successfully.';
+        if (!focStartDate.trim() || !focEndDate.trim()) {
+          setSaveMessage(accountSavedMsg);
+          setFocSaveError('FOC Override: Start Date and End Date are required.');
+          return;
+        }
+        if (new Date(focEndDate) < new Date(focStartDate)) {
+          setSaveMessage(accountSavedMsg);
+          setFocSaveError('FOC Override: End Date must be on or after Start Date.');
+          return;
+        }
+
+        try {
+          await createFocOverrides(
+            token,
+            savedAccountId,
+            focStartDate.trim(),
+            focEndDate.trim(),
+            validFocEntries.map((e) => ({
+              productId: e.productId,
+              overridePercentage: parseFloat(e.overridePercentage),
+              ...(e.notes.trim() ? { notes: e.notes.trim() } : {}),
+            }))
+          );
+        } catch (focErr) {
+          // Account was saved — show success but warn about FOC failure
+          setSaveMessage(accountSavedMsg);
+          setFocSaveError(
+            'Account saved but FOC override could not be submitted: ' +
+              (focErr.message || 'Please try again.')
+          );
+          return; // don't auto-navigate so user can see the warning
+        }
+      }
+
+      setSaveMessage(isEdit ? 'Account updated successfully.' : 'Account created successfully.');
       setTimeout(() => navigation.navigate('Accounts'), 1000);
     } catch (e) {
       setSaveError(e.message || 'Failed to save account');
@@ -329,16 +660,45 @@ export default function AccountFormScreen({ navigation, route, userDetails, appM
   };
 
   const handleBulkSubmit = async () => {
-    const validRows = bulkRows.filter((r) => r.errors.length === 0);
-    if (!validRows.length) { alert('No valid rows to submit.'); return; }
+    const validPayloads = bulkRows.filter((r) => r.errors.length === 0).map((r) => r.payload);
+    if (!validPayloads.length) { alert('No valid rows to submit.'); return; }
+
+    // Split into chunks of BATCH_SIZE
+    const batches = [];
+    for (let i = 0; i < validPayloads.length; i += BATCH_SIZE) {
+      batches.push(validPayloads.slice(i, i + BATCH_SIZE));
+    }
+
     setBulkSubmitting(true);
+    setSaveError('');
+    setBulkResult(null);
+    setBatchProgress({ sentBatches: 0, totalBatches: batches.length, sentAccounts: 0, totalAccounts: validPayloads.length });
+    startSpin();
+
+    const combined = { total: 0, createdCount: 0, failedCount: 0, errors: [] };
+
     try {
-      const result = await bulkCreateAccounts(token, validRows.map((r) => r.payload));
-      setBulkResult(result);
+      for (let i = 0; i < batches.length; i++) {
+        const res = await bulkCreateAccounts(token, batches[i]);
+        combined.total       += res?.total        ?? batches[i].length;
+        combined.createdCount += res?.createdCount ?? 0;
+        combined.failedCount  += res?.failedCount  ?? 0;
+        if (Array.isArray(res?.errors)) combined.errors.push(...res.errors);
+
+        setBatchProgress({
+          sentBatches: i + 1,
+          totalBatches: batches.length,
+          sentAccounts: i + 1 < batches.length ? (i + 1) * BATCH_SIZE : validPayloads.length,
+          totalAccounts: validPayloads.length,
+        });
+      }
+      setBulkResult(combined);
     } catch (e) {
       setSaveError(e.message || 'Bulk upload failed');
     } finally {
+      stopSpin();
       setBulkSubmitting(false);
+      setBatchProgress(null);
     }
   };
 
@@ -519,20 +879,261 @@ export default function AccountFormScreen({ navigation, route, userDetails, appM
                 />
               </Field>
 
-              {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
-              {saveMessage ? <Text style={styles.successText}>{saveMessage}</Text> : null}
-
-              <View style={styles.actionRow}>
-                <Pressable style={styles.btnCancel} onPress={() => navigation.goBack()}>
-                  <Text style={styles.btnCancelText}>Cancel</Text>
-                </Pressable>
-                <Pressable style={styles.btnPrimary} onPress={handleSave} disabled={saving}>
-                  {saving && <ActivityIndicator size={14} color={colors.white} />}
-                  <Text style={styles.btnPrimaryText}>{saving ? 'Saving...' : isEdit ? 'Update Account' : 'Save Account'}</Text>
-                </Pressable>
-              </View>
             </View>
 
+          </View>
+
+          {/* ── Sales Team Assignment Section ── */}
+          <View style={styles.focSection}>
+            <Pressable style={styles.focToggle} onPress={() => setShowSalesSection((v) => !v)}>
+              <View style={styles.focToggleLeft}>
+                <Ionicons
+                  name="people-outline"
+                  size={16}
+                  color={showSalesSection ? colors.primary : colors.textSecondary}
+                />
+                <Text style={[styles.focToggleTitle, showSalesSection && { color: colors.primary }]}>
+                  Sales Team Members
+                </Text>
+                <View style={styles.optionalBadge}>
+                  <Text style={styles.optionalBadgeText}>Optional</Text>
+                </View>
+                {selectedSalesTeam.length > 0 && (
+                  <View style={styles.focCountBadge}>
+                    <Text style={styles.focCountBadgeText}>{selectedSalesTeam.length}</Text>
+                  </View>
+                )}
+              </View>
+              <Ionicons
+                name={showSalesSection ? 'chevron-up' : 'chevron-down'}
+                size={14}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+
+            {showSalesSection && (
+              <View style={styles.focBody}>
+                {/* Selected salesperson pills */}
+                {selectedSalesTeam.length > 0 && (
+                  <View style={styles.salesPillsRow}>
+                    {selectedSalesTeam.map((m) => {
+                      const mid = m._id || m.id;
+                      return (
+                        <View key={mid} style={styles.salesPersonCard}>
+                          <View style={styles.salesPersonAvatar}>
+                            <Text style={styles.salesPersonAvatarText}>
+                              {(m.fullName || '?').split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() || '').join('')}
+                            </Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.salesPersonName}>{m.fullName || '—'}</Text>
+                            {m.position ? <Text style={styles.salesPersonPos}>{m.position}</Text> : null}
+                            {m.phone ? <Text style={styles.salesPersonContact}>📞 {m.phone}</Text> : null}
+                            {m.email ? <Text style={styles.salesPersonContact}>✉ {m.email}</Text> : null}
+                          </View>
+                          <Pressable onPress={() => toggleSalesTeamMember(m)} style={styles.salesRemoveBtn}>
+                            <Ionicons name="close-circle" size={18} color={colors.danger} />
+                          </Pressable>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* Search input */}
+                <View style={styles.salesSearchWrap}>
+                  <Ionicons name="search-outline" size={14} color={colors.textSecondary} />
+                  <TextInput
+                    style={styles.salesSearchInput}
+                    placeholder="Search salespeople by name or position..."
+                    placeholderTextColor={colors.textMuted}
+                    value={salesTeamSearch}
+                    onChangeText={(t) => { setSalesTeamSearch(t); if (!t) setSalesTeamShowDrop(false); }}
+                    onFocus={() => { if (salesTeamResults.length) setSalesTeamShowDrop(true); }}
+                  />
+                  {salesTeamLoading && <ActivityIndicator size={13} color={colors.primary} />}
+                  {salesTeamSearch ? (
+                    <Pressable onPress={() => { setSalesTeamSearch(''); setSalesTeamShowDrop(false); }}>
+                      <Ionicons name="close-circle" size={14} color={colors.textMuted} />
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                {/* Dropdown */}
+                {salesTeamShowDrop && salesTeamResults.length > 0 && (
+                  <View style={styles.salesDropPanel}>
+                    {salesTeamResults.map((m) => {
+                      const mid  = m._id || m.id;
+                      const name = m.fullName || m.name || '—';
+                      const pos  = m.position || '';
+                      const sel  = selectedSalesTeam.some((s) => (s._id || s.id) === mid);
+                      return (
+                        <Pressable
+                          key={mid}
+                          style={[styles.salesDropItem, sel && styles.salesDropItemSelected]}
+                          onPress={() => { toggleSalesTeamMember(m); setSalesTeamSearch(''); setSalesTeamShowDrop(false); }}
+                        >
+                          <View style={styles.salesDropAvatar}>
+                            <Text style={styles.salesDropAvatarText}>
+                              {name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() || '').join('')}
+                            </Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.salesDropName, sel && { color: colors.primary }]}>{name}</Text>
+                            {pos ? <Text style={styles.salesDropPos}>{pos}</Text> : null}
+                          </View>
+                          {sel && <Ionicons name="checkmark-circle" size={16} color={colors.success} />}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {salesTeamShowDrop && salesTeamResults.length === 0 && !salesTeamLoading && salesTeamSearch.length >= 2 && (
+                  <View style={styles.salesDropEmpty}>
+                    <Text style={styles.salesDropEmptyText}>No salespeople found for "{salesTeamSearch}"</Text>
+                  </View>
+                )}
+
+                <View style={styles.salesInfoNote}>
+                  <Ionicons name="information-circle-outline" size={13} color="#1D4ED8" />
+                  <Text style={styles.salesInfoText}>
+                    These salespeople will support this account and can be used later for order email CC.
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* ── FOC Override Section ── */}
+          <View style={styles.focSection}>
+            <Pressable style={styles.focToggle} onPress={toggleFocSection}>
+              <View style={styles.focToggleLeft}>
+                <Ionicons
+                  name="gift-outline"
+                  size={16}
+                  color={showFocSection ? colors.primary : colors.textSecondary}
+                />
+                <Text style={[styles.focToggleTitle, showFocSection && { color: colors.primary }]}>
+                  FOC Override
+                </Text>
+                <View style={styles.optionalBadge}>
+                  <Text style={styles.optionalBadgeText}>Optional</Text>
+                </View>
+                {focEntries.filter((e) => e.productId).length > 0 && (
+                  <View style={styles.focCountBadge}>
+                    <Text style={styles.focCountBadgeText}>
+                      {focEntries.filter((e) => e.productId).length}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Ionicons
+                name={showFocSection ? 'chevron-up' : 'chevron-down'}
+                size={14}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+
+            {showFocSection && (
+              <View style={styles.focBody}>
+                {productsLoading ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 }}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={styles.loadingText}>Loading products…</Text>
+                  </View>
+                ) : null}
+
+                {/* Validity period — applies to the whole FOC document */}
+                <View style={styles.focDatesCard}>
+                  <View style={styles.focDatesHeader}>
+                    <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+                    <Text style={styles.focDatesTitle}>Validity Period</Text>
+                    <Text style={styles.focDatesHint}>applies to all overrides below</Text>
+                  </View>
+                  <View style={styles.focTwoCol}>
+                    <Field label="Start Date" required style={{ flex: 1 }}>
+                      <FocDateInput value={focStartDate} onChange={setFocStartDate} />
+                    </Field>
+                    <Field label="End Date" required style={{ flex: 1 }}>
+                      <FocDateInput value={focEndDate} onChange={setFocEndDate} />
+                    </Field>
+                  </View>
+                </View>
+
+                {/* Per-product override rows */}
+                {focEntries.map((entry, idx) => (
+                  <View key={idx} style={styles.focEntry}>
+                    <View style={styles.focEntryHeader}>
+                      <Text style={styles.focEntryTitle}>Override {idx + 1}</Text>
+                      <Pressable onPress={() => removeFocEntry(idx)} style={styles.focRemoveBtn}>
+                        <Ionicons name="close-circle-outline" size={17} color={colors.danger} />
+                      </Pressable>
+                    </View>
+
+                    <Field label="Product" required>
+                      <ProductPickerDropdown
+                        value={entry.productId}
+                        products={products}
+                        loading={productsLoading}
+                        onChange={(pid) => updateFocEntry(idx, 'productId', pid)}
+                      />
+                    </Field>
+
+                    <View style={styles.focTwoCol}>
+                      <Field label="Override %" required style={{ flex: 1 }}>
+                        <TextInput
+                          style={styles.input}
+                          value={entry.overridePercentage}
+                          onChangeText={(v) => updateFocEntry(idx, 'overridePercentage', v)}
+                          placeholder="e.g. 12.5"
+                          placeholderTextColor={colors.textMuted}
+                          keyboardType="numeric"
+                        />
+                      </Field>
+                      <Field label="Notes" style={{ flex: 2 }}>
+                        <TextInput
+                          style={styles.input}
+                          value={entry.notes}
+                          onChangeText={(v) => updateFocEntry(idx, 'notes', v)}
+                          placeholder="Optional notes"
+                          placeholderTextColor={colors.textMuted}
+                        />
+                      </Field>
+                    </View>
+                  </View>
+                ))}
+
+                {!productsLoading && (
+                  <Pressable style={styles.focAddBtn} onPress={addFocEntry}>
+                    <Ionicons name="add-circle-outline" size={15} color={colors.primary} />
+                    <Text style={styles.focAddBtnText}>Add Override Entry</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Feedback + action row (lifted out of right column) */}
+          {focSaveError ? (
+            <View style={styles.focWarnBanner}>
+              <Ionicons name="warning-outline" size={15} color="#D97706" />
+              <Text style={styles.focWarnText}>{focSaveError}</Text>
+            </View>
+          ) : null}
+          {saveError ? <Text style={[styles.errorText, { marginTop: 10 }]}>{saveError}</Text> : null}
+          {saveMessage ? <Text style={[styles.successText, { marginTop: 10 }]}>{saveMessage}</Text> : null}
+
+          <View style={styles.actionRow}>
+            <Pressable style={styles.btnCancel} onPress={() => navigation.goBack()}>
+              <Text style={styles.btnCancelText}>Cancel</Text>
+            </Pressable>
+            <Pressable style={styles.btnPrimary} onPress={handleSave} disabled={saving}>
+              {saving && <ActivityIndicator size={14} color={colors.white} />}
+              <Text style={styles.btnPrimaryText}>
+                {saving ? 'Saving...' : isEdit ? 'Update Account' : 'Save Account'}
+              </Text>
+            </Pressable>
           </View>
         </View>
 
@@ -631,9 +1232,11 @@ export default function AccountFormScreen({ navigation, route, userDetails, appM
                       <Text style={styles.btnPrimaryText}>View Accounts</Text>
                     </Pressable>
                   </View>
+                ) : bulkSubmitting && batchProgress ? (
+                  <BatchProgressCard batchProgress={batchProgress} spinValue={spinValue} />
                 ) : (
                   <View style={styles.bulkActions}>
-                    <Pressable style={styles.btnCancel} onPress={() => { setBulkRows([]); setBulkResult(null); }}>
+                    <Pressable style={styles.btnCancel} onPress={() => { setBulkRows([]); setBulkResult(null); stopSpin(); setBatchProgress(null); }}>
                       <Text style={styles.btnCancelText}>Clear</Text>
                     </Pressable>
                     <Pressable
@@ -641,9 +1244,12 @@ export default function AccountFormScreen({ navigation, route, userDetails, appM
                       onPress={handleBulkSubmit}
                       disabled={bulkSubmitting || bulkRows.filter((r) => r.errors.length === 0).length === 0}
                     >
-                      {bulkSubmitting && <ActivityIndicator size={14} color={colors.white} />}
+                      <Ionicons name="cloud-upload-outline" size={14} color={colors.white} />
                       <Text style={styles.btnPrimaryText}>
-                        {bulkSubmitting ? 'Submitting...' : `Submit ${bulkRows.filter((r) => r.errors.length === 0).length} Accounts`}
+                        {`Submit ${bulkRows.filter((r) => r.errors.length === 0).length} Accounts`}
+                        {bulkRows.filter((r) => r.errors.length === 0).length > BATCH_SIZE
+                          ? `  ·  ${Math.ceil(bulkRows.filter((r) => r.errors.length === 0).length / BATCH_SIZE)} batches`
+                          : ''}
                       </Text>
                     </Pressable>
                   </View>
@@ -770,4 +1376,142 @@ const styles = StyleSheet.create({
 
   bulkActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   bulkResultBox: { gap: 8, padding: 16, borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.backgroundColor },
+
+  // ── FOC Override Section ──
+  focSection: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: 10,
+    overflow: 'hidden', marginTop: 20,
+  },
+  focToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 13, backgroundColor: colors.backgroundColor,
+  },
+  focToggleLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  focToggleTitle: { fontSize: 14, fontWeight: '700', color: colors.textSecondary },
+  optionalBadge: {
+    backgroundColor: '#FEF3C7', borderRadius: 4, paddingHorizontal: 7, paddingVertical: 2,
+  },
+  optionalBadgeText: { fontSize: 10, fontWeight: '700', color: '#92400E' },
+  focCountBadge: {
+    backgroundColor: colors.primary, borderRadius: 10, minWidth: 18, height: 18,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
+  },
+  focCountBadgeText: { fontSize: 10, fontWeight: '800', color: colors.white },
+  focBody: {
+    padding: 16, gap: 12,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  focEntry: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: 8,
+    padding: 14, gap: 12, backgroundColor: colors.surface,
+  },
+  focEntryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  focEntryTitle: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
+  focRemoveBtn: { padding: 2 },
+  focTwoCol: { flexDirection: 'row', gap: 12 },
+  focDatesCard: {
+    borderWidth: 1, borderColor: '#BFDBFE', borderRadius: 8,
+    backgroundColor: '#F0F5FF', padding: 12, gap: 10,
+  },
+  focDatesHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  focDatesTitle: { fontSize: 13, fontWeight: '700', color: colors.primary },
+  focDatesHint: { fontSize: 11, color: colors.textMuted, fontStyle: 'italic' },
+
+  focAddBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.primary,
+    borderRadius: 8, paddingHorizontal: 14, paddingVertical: 9, alignSelf: 'flex-start',
+  },
+  focAddBtnText: { color: colors.primary, fontSize: 13, fontWeight: '700' },
+  focWarnBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A',
+    borderRadius: 8, padding: 12, marginTop: 12,
+  },
+  focWarnText: { color: '#92400E', fontSize: 13, flex: 1, lineHeight: 18 },
+
+  // ── Product picker ──
+  productDropdown: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: 8,
+    backgroundColor: colors.surface, marginTop: 4,
+    shadowColor: '#0B2B66', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 3 },
+  },
+  productSearchRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  productSearchInput: {
+    flex: 1, fontSize: 13, color: colors.textPrimary,
+    outlineStyle: 'none', height: 24,
+  },
+
+  // Batch progress card
+  progressCard: {
+    alignItems: 'center', backgroundColor: '#F0F5FF',
+    borderWidth: 1, borderColor: '#BFDBFE', borderRadius: 12,
+    paddingVertical: 28, paddingHorizontal: 24, gap: 6,
+  },
+  progressTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: '800', marginBottom: 2 },
+  progressMessage: { color: colors.primary, fontSize: 13, fontWeight: '600', marginBottom: 12, textAlign: 'center' },
+  progressBarTrack: { width: '100%', height: 10, backgroundColor: '#DBEAFE', borderRadius: 999, overflow: 'hidden', marginBottom: 8 },
+  progressBarFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 999, minWidth: 10, transition: 'width 0.4s ease' },
+  progressStatsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 8 },
+  progressPct: { color: colors.primary, fontSize: 13, fontWeight: '800' },
+  progressStats: { color: colors.textSecondary, fontSize: 12 },
+  progressWarningRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  progressWarning: { color: colors.textMuted, fontSize: 11, fontStyle: 'italic' },
+
+  // ── Sales Team Assignment styles ──────────────────────────────────────────
+  salesPillsRow: { flexDirection: 'column', gap: 8, marginBottom: 12 },
+  salesPersonCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: colors.surfaceSoft, borderRadius: 8,
+    borderWidth: 1, borderColor: colors.primaryLight, padding: 10,
+  },
+  salesPersonAvatar: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  salesPersonAvatarText: { fontSize: 12, fontWeight: '800', color: colors.primary },
+  salesPersonName:    { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
+  salesPersonPos:     { fontSize: 11, color: colors.textSecondary, marginTop: 1 },
+  salesPersonContact: { fontSize: 11, color: colors.textSecondary, marginTop: 1 },
+  salesRemoveBtn:     { padding: 2 },
+
+  salesSearchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 8,
+    paddingHorizontal: 12, height: 40, backgroundColor: colors.inputBackground,
+  },
+  salesSearchInput: {
+    flex: 1, fontSize: 13, color: colors.textPrimary, outlineStyle: 'none',
+  },
+  salesDropPanel: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: 8,
+    marginTop: 4, backgroundColor: colors.surface,
+    shadowColor: '#0B2B66', shadowOpacity: 0.08, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 }, elevation: 6,
+  },
+  salesDropItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  salesDropItemSelected: { backgroundColor: colors.surfaceSoft },
+  salesDropAvatar: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  salesDropAvatarText: { fontSize: 11, fontWeight: '800', color: colors.primary },
+  salesDropName: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  salesDropPos:  { fontSize: 11, color: colors.textSecondary, marginTop: 1 },
+  salesDropEmpty: { padding: 14, alignItems: 'center' },
+  salesDropEmptyText: { fontSize: 12, color: colors.textMuted },
+  salesInfoNote: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    marginTop: 10, backgroundColor: '#EFF6FF', borderRadius: 7,
+    borderWidth: 1, borderColor: '#BFDBFE', padding: 10,
+  },
+  salesInfoText: { flex: 1, fontSize: 11, color: '#1D4ED8', lineHeight: 16 },
 });

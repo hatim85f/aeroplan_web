@@ -91,14 +91,14 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
     /* Sheet 1 — data entry */
     const chanHeaders = channels.map((ch) => ch.channelName || ch.channelKey || ch._id);
 
-    const instructionRow  = ['Fill the yellow columns below. One row per product. Units must be whole numbers (0 = skip that channel).'];
-    const headerRow       = ['Product Nickname *', 'Year *', ...chanHeaders];
+    const instructionRow  = ['Fill the yellow columns below. One row per product/year target. Backend splits units by rep accountability percentages.'];
+    const headerRow       = ['Product Nickname *', 'Year *', 'Status *', ...chanHeaders];
     const exampleRow1     = products[0]
-      ? [products[0].productNickname || products[0].productName || 'EXAMPLE-NICK', THIS_YEAR, ...channels.map((_, i) => i === 0 ? 120 : '')]
-      : ['EXAMPLE-NICK', THIS_YEAR, ...channels.map((_, i) => i === 0 ? 120 : '')];
+      ? [products[0].productNickname || products[0].productName || 'EXAMPLE-NICK', THIS_YEAR, 'active', ...channels.map((_, i) => i === 0 ? 120 : '')]
+      : ['EXAMPLE-NICK', THIS_YEAR, 'active', ...channels.map((_, i) => i === 0 ? 120 : '')];
     const exampleRow2     = products[1]
-      ? [products[1].productNickname || products[1].productName || 'EXAMPLE-2', THIS_YEAR, ...channels.map(() => '')]
-      : ['EXAMPLE-2', THIS_YEAR, ...channels.map(() => '')];
+      ? [products[1].productNickname || products[1].productName || 'EXAMPLE-2', THIS_YEAR, 'active', ...channels.map(() => '')]
+      : ['EXAMPLE-2', THIS_YEAR, 'active', ...channels.map(() => '')];
 
     const dataSheet = XLSX.utils.aoa_to_sheet([
       instructionRow,
@@ -112,6 +112,7 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
     dataSheet['!cols'] = [
       { wch: 26 }, // Product Nickname
       { wch: 10 }, // Year
+      { wch: 12 }, // Status
       ...channels.map(() => ({ wch: 18 })),
     ];
 
@@ -153,17 +154,20 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
       ['HOW TO FILL THE TEMPLATE:'],
       ['1. Open the "Target Assignments" sheet.'],
       ['2. Do NOT edit or remove the header row (row 3).'],
-      ['3. Each row = one product.'],
+      ['3. Each row = one product/year target.'],
       ['4. Column A: Product Nickname (must match exactly — see "Products Reference" sheet).'],
       ['5. Column B: Year (e.g. 2026).'],
-      ['6. Columns C onwards: Enter target units for each channel. Leave blank or 0 to skip.'],
-      ['7. Only channels with units > 0 will be included in the submission.'],
+      ['6. Column C: Status must be active or inactive.'],
+      ['7. Columns D onwards: Enter target units for each channel. Leave blank or 0 to skip.'],
+      ['8. Only channels with units > 0 will be included in the submission.'],
       [],
       ['IMPORTANT:'],
+      ['- Do NOT add rep, team, start date, end date, or percentage columns to this target sheet.'],
+      ['- Backend derives assigned reps, accountability periods, and target splits from product accountability assignments.'],
       ['- Do NOT change the column headers (channel names).'],
       ['- Do NOT add new columns.'],
       ['- Units must be whole positive numbers.'],
-      ['- Each row is submitted as a separate target assignment.'],
+      ['- Each row is submitted to /target-assignments/from-product-assignments.'],
       [],
       ['After filling, save as .xlsx and upload it in the app.'],
     ];
@@ -214,7 +218,7 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
         /* Build channel lookup: columnIndex → { channelId, channelName } */
         const colChannelMap = {};
         headers.forEach((h, idx) => {
-          if (idx < 2) return; // skip Product Nickname, Year
+          if (idx < 3) return; // skip Product Nickname, Year, Status
           const match = channels.find((ch) =>
             (ch.channelName || '').toLowerCase() === h.toLowerCase() ||
             (ch.channelKey  || '').toLowerCase() === h.toLowerCase()
@@ -238,10 +242,12 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
           const rowNum = idx + headerRowIdx + 2;
           const nick   = String(row[0] || '').trim();
           const yearV  = String(row[1] || '').trim();
+          const statusV = String(row[2] || 'active').trim().toLowerCase();
           const errs   = [];
 
           if (!nick) { errs.push('Product Nickname is required'); }
           if (!yearV || isNaN(Number(yearV))) { errs.push('Year is required and must be a number'); }
+          if (!['active', 'inactive'].includes(statusV)) { errs.push('Status must be active or inactive'); }
 
           const product = prodByNick[nick.toLowerCase()] || prodByName[nick.toLowerCase()];
           if (nick && !product) errs.push(`Product "${nick}" not found in active products`);
@@ -269,6 +275,7 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
             productName:    product ? (product.productName || product.name || nick) : nick,
             productId:      product ? (product._id || product.productId) : null,
             year:           Number(yearV),
+            targetStatus:   statusV,
             channelTargets,
           };
 
@@ -312,6 +319,7 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
           createTargetFromProductAssignments(token, {
             productId:      row.productId,
             year:           row.year,
+            status:         row.targetStatus,
             channelTargets: row.channelTargets.map(({ channelId, units }) => ({ channelId, units })),
           }).then(() => ({
             nick: row.productNickname, name: row.productName,
@@ -399,7 +407,7 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
               <View style={styles.columnPreview}>
                 <Text style={styles.columnPreviewLabel}>Template columns:</Text>
                 <View style={styles.columnChips}>
-                  {['Product Nickname *', 'Year *', ...channels.slice(0, 6).map((ch) => ch.channelName || ch.channelKey)].map((c) => (
+                  {['Product Nickname *', 'Year *', 'Status *', ...channels.slice(0, 6).map((ch) => ch.channelName || ch.channelKey)].map((c) => (
                     <View key={c} style={[styles.chip, c.endsWith('*') && styles.chipRequired]}>
                       <Text style={[styles.chipText, c.endsWith('*') && styles.chipTextRequired]}>{c}</Text>
                     </View>
@@ -469,7 +477,7 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
               <View style={{ minWidth: 700 }}>
                 <View style={styles.tableHead}>
-                  {['Row', 'Product Nickname', 'Year', 'Channels with Units', 'Total Units', 'Status'].map((h) => (
+                  {['Row', 'Product Nickname', 'Year', 'Target Status', 'Channels with Units', 'Total Units', 'Status'].map((h) => (
                     <Text key={h} style={styles.th}>{h}</Text>
                   ))}
                 </View>
@@ -481,6 +489,7 @@ export default function TargetBulkImportScreen({ navigation, userDetails, appMet
                       <Text style={styles.tdSub}>{r.productName}</Text>
                     </View>
                     <Text style={styles.td}>{r.year || '—'}</Text>
+                    <Text style={styles.td}>{r.targetStatus || '—'}</Text>
                     <View style={styles.td}>
                       {r._valid
                         ? r.channelTargets.map((ct) => (

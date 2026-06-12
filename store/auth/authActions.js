@@ -91,6 +91,12 @@ export const updateUserProfile = async (token, profile) => {
   return result.data || result.user || result.profile || result;
 };
 
+export const changePassword = (token, body) =>
+  apiRequest('/auth/me/change-password', { method: 'PATCH', token, body });
+
+export const deleteMyAccount = (token) =>
+  apiRequest('/auth/me', { method: 'DELETE', token });
+
 export const saveUserDetails = async (payload) => {
   await AsyncStorage.setItem(USER_DETAILS_STORAGE_KEY, JSON.stringify(payload));
   return payload;

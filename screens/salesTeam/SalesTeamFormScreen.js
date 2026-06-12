@@ -396,7 +396,7 @@ export default function SalesTeamFormScreen({
   /* ── Render ── */
   if (loadingInit) {
     return (
-      <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="Sales Team">
+      <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="SalesTeam">
         <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>
       </AppShell>
     );
@@ -404,7 +404,7 @@ export default function SalesTeamFormScreen({
 
   if (loadError) {
     return (
-      <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="Sales Team">
+      <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="SalesTeam">
         <View style={styles.centered}>
           <Text style={styles.errorText}>{loadError}</Text>
           <Pressable style={styles.retryBtn} onPress={() => navigation.goBack()}>
@@ -421,12 +421,12 @@ export default function SalesTeamFormScreen({
       userDetails={userDetails}
       appMetadata={appMetadata}
       onSignOut={onSignOut}
-      activeRoute="Sales Team"
+      activeRoute="SalesTeam"
     >
       {/* ── Breadcrumb ── */}
       <View style={styles.breadcrumb}>
         <Pressable onPress={() => navigation.navigate('SalesTeam')}>
-          <Text style={styles.breadcrumbLink}>Sales Team</Text>
+          <Text style={styles.breadcrumbLink}>Sales Team Members</Text>
         </Pressable>
         <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
         <Text style={styles.breadcrumbCurrent}>{isEdit ? 'Edit Salesperson' : 'Add Salesperson'}</Text>

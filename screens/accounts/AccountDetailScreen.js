@@ -8,6 +8,7 @@ import { globalHeight, globalWidth } from '../../constants/globalWidth';
 import { getAccountById, selectForVisit, unselectForVisit } from '../../store/accounts/accountActions';
 import { getMyTeams, getTeamMembers } from '../../store/teams/teamsActions';
 import { getProfilePicture, getProfileInitials } from '../../constants/profile';
+import { getSalesTeamByAccount } from '../../store/salesTeam/salesTeamActions';
 
 const isManager = (role) =>
   ['admin', 'manager', 'senior_manager'].includes(String(role).toLowerCase());
@@ -56,11 +57,12 @@ export default function AccountDetailScreen({ navigation, route, userDetails, ap
   const role = user.role || '';
   const managerRole = isManager(role);
 
-  const [account, setAccount] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [visiting, setVisiting] = useState(false);
-  const [memberMap, setMemberMap] = useState({});
+  const [account,    setAccount]    = useState(null);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState('');
+  const [visiting,   setVisiting]   = useState(false);
+  const [memberMap,  setMemberMap]  = useState({});
+  const [salesTeam,  setSalesTeam]  = useState([]);
 
   const fetchAccount = useCallback(async () => {
     setLoading(true);
@@ -76,6 +78,14 @@ export default function AccountDetailScreen({ navigation, route, userDetails, ap
   }, [token, accountId]);
 
   useEffect(() => { fetchAccount(); }, [fetchAccount]);
+
+  // Fetch assigned sales team
+  useEffect(() => {
+    if (!accountId) return;
+    getSalesTeamByAccount(token, accountId)
+      .then((data) => setSalesTeam(Array.isArray(data) ? data : []))
+      .catch(() => setSalesTeam([]));
+  }, [token, accountId]);
 
   // Build a lookup map of userId → member object so we can resolve profile pictures
   useEffect(() => {
@@ -203,6 +213,17 @@ export default function AccountDetailScreen({ navigation, route, userDetails, ap
               </Text>
             </Pressable>
           )}
+          {/* Create Order — available to both managers and reps */}
+          <Pressable
+            style={styles.btnCreateOrder}
+            onPress={() => navigation.navigate('CreateOrder', {
+              resetKey: Date.now(),
+              preselectedAccount: account,
+            })}
+          >
+            <Ionicons name="receipt-outline" size={14} color={colors.white} />
+            <Text style={styles.btnCreateOrderText}>Create Order</Text>
+          </Pressable>
           {managerRole && (
             <Pressable
               style={styles.btnPrimary}
@@ -293,7 +314,7 @@ export default function AccountDetailScreen({ navigation, route, userDetails, ap
             )}
           </SectionCard>
 
-          <SectionCard title="Account Owner">
+          <SectionCard title="Account Handler">
             <View style={styles.ownerBox}>
               <View style={styles.ownerAvatar}>
                 <Ionicons name="person" size={20} color={colors.primary} />
@@ -313,6 +334,62 @@ export default function AccountDetailScreen({ navigation, route, userDetails, ap
                   <Text style={styles.viewVisitText}>View Visit</Text>
                 </Pressable>
               </View>
+            )}
+          </SectionCard>
+
+          <SectionCard title={`Sales Team Members${salesTeam.length > 0 ? ` (${salesTeam.length})` : ''}`}>
+            {salesTeam.length === 0 ? (
+              <View style={styles.emptySection}>
+                <Ionicons name="people-outline" size={24} color={colors.textMuted} />
+                <Text style={styles.emptySectionText}>No salespeople assigned</Text>
+              </View>
+            ) : (
+              salesTeam.map((m) => {
+                const mid   = m._id || m.id;
+                const mName = m.fullName || m.name || '—';
+                const mPos  = m.position || '';
+                const mPhone = m.phone || m.phoneNumber || '';
+                const mEmail = m.email || '';
+                const initials = mName.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() || '').join('');
+                return (
+                  <View key={mid} style={styles.salesPersonRow}>
+                    <View style={styles.salesPersonAvatar}>
+                      <Text style={styles.salesPersonAvatarText}>{initials}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.salesPersonName}>{mName}</Text>
+                      {mPos ? <Text style={styles.salesPersonPos}>{mPos}</Text> : null}
+                      {mPhone ? (
+                        <View style={styles.salesContactRow}>
+                          <Ionicons name="call-outline" size={11} color={colors.textMuted} />
+                          <Text style={styles.salesContactText}>{mPhone}</Text>
+                          <Pressable onPress={() => navigator?.clipboard?.writeText(mPhone)}>
+                            <Ionicons name="copy-outline" size={11} color={colors.primary} />
+                          </Pressable>
+                        </View>
+                      ) : null}
+                      {mEmail ? (
+                        <View style={styles.salesContactRow}>
+                          <Ionicons name="mail-outline" size={11} color={colors.textMuted} />
+                          <Text style={styles.salesContactText} numberOfLines={1}>{mEmail}</Text>
+                          <Pressable onPress={() => navigator?.clipboard?.writeText(mEmail)}>
+                            <Ionicons name="copy-outline" size={11} color={colors.primary} />
+                          </Pressable>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                );
+              })
+            )}
+            {managerRole && salesTeam.length === 0 && (
+              <Pressable
+                style={styles.assignSalesBtn}
+                onPress={() => navigation.navigate('AccountForm', { mode: 'edit', accountId })}
+              >
+                <Ionicons name="add" size={13} color={colors.primary} />
+                <Text style={styles.assignSalesBtnText}>Assign Salespeople</Text>
+              </Pressable>
             )}
           </SectionCard>
         </View>
@@ -351,6 +428,8 @@ const styles = StyleSheet.create({
   btnOutline: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: colors.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
   btnOutlineActive: { backgroundColor: colors.primary },
   btnOutlineText: { color: colors.primary, fontSize: 13, fontWeight: '700' },
+  btnCreateOrder: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#059669', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
+  btnCreateOrderText: { color: colors.white, fontSize: 13, fontWeight: '700' },
 
   twoCol: { flexDirection: 'row', gap: globalWidth('1.5%'), alignItems: 'flex-start' },
   leftCol: { flex: 0.6, gap: globalHeight('1.2%') },
@@ -390,4 +469,15 @@ const styles = StyleSheet.create({
   ownerVisitDate: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   viewVisitBtn: { alignSelf: 'flex-start', marginTop: 6 },
   viewVisitText: { fontSize: 12, color: colors.primary, fontWeight: '700' },
+
+  salesPersonRow:       { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  salesPersonAvatar:    { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  salesPersonAvatarText:{ fontSize: 12, fontWeight: '800', color: colors.primary },
+  salesPersonName:      { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
+  salesPersonPos:       { fontSize: 11, color: colors.textSecondary, marginTop: 1 },
+  salesContactRow:      { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  salesContactText:     { fontSize: 11, color: colors.textSecondary, flex: 1 },
+
+  assignSalesBtn:     { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10, alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.primary, borderRadius: 7, paddingHorizontal: 10, paddingVertical: 5 },
+  assignSalesBtnText: { fontSize: 12, color: colors.primary, fontWeight: '700' },
 });

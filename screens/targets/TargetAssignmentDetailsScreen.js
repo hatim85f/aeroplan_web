@@ -28,8 +28,6 @@ const TARGET_BASIS_LABELS = {
 
 const STATUS_STYLE = {
   active:   { bg: '#DCFCE7', text: '#15803D' },
-  upcoming: { bg: '#FFF7ED', text: '#C2410C' },
-  expired:  { bg: '#F1F5F9', text: '#64748B' },
   inactive: { bg: '#F1F5F9', text: '#64748B' },
 };
 

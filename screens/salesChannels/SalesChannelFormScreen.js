@@ -69,6 +69,7 @@ export default function SalesChannelFormScreen({ navigation, route, userDetails,
     channelKey: '',
     description: '',
     focEnabled: true,
+    allowRepOrders: false,
     status: 'active',
     isActive: true,
   });
@@ -86,6 +87,7 @@ export default function SalesChannelFormScreen({ navigation, route, userDetails,
           channelKey: data?.channelKey || '',
           description: data?.description || '',
           focEnabled: data?.focEnabled !== false,
+          allowRepOrders: data?.allowRepOrders === true,
           status: data?.status || 'active',
           isActive: data?.isActive !== false,
         });
@@ -125,6 +127,7 @@ export default function SalesChannelFormScreen({ navigation, route, userDetails,
         channelKey: form.channelKey.trim() || toKey(form.channelName),
         description: form.description.trim(),
         focEnabled: form.focEnabled,
+        allowRepOrders: form.allowRepOrders,
         status: form.status,
         isActive: form.isActive,
       };
@@ -233,6 +236,15 @@ export default function SalesChannelFormScreen({ navigation, route, userDetails,
                 description="Allow setting a Free-of-Charge percentage for products in this channel."
                 value={form.focEnabled}
                 onChange={(v) => setForm((f) => ({ ...f, focEnabled: v }))}
+              />
+
+              <View style={styles.divider} />
+
+              <Toggle
+                label="Allow medical reps to create orders in this channel"
+                description="When enabled, this channel appears in order creation."
+                value={form.allowRepOrders}
+                onChange={(v) => setForm((f) => ({ ...f, allowRepOrders: v }))}
               />
 
               <View style={styles.divider} />

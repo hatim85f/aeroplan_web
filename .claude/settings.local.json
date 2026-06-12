@@ -2,7 +2,26 @@
   "permissions": {
     "allow": [
       "Bash(cd \"d:\\\\\\\\Plans\\\\\\\\aeroplanweb\")",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "PowerShell(netstat -ano)",
+      "PowerShell(Get-Process -Id 16460 -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Id 16460 -Force -Confirm:$false)",
+      "Read(//c/Users/hatim/AppData/Local/Temp/**)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:8081\" -TimeoutSec 10 -UseBasicParsing -ErrorAction SilentlyContinue | Select-Object StatusCode, StatusDescription, @{N='BodyLength';E={$_.Content.Length}})",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8081\" -TimeoutSec 15 -UseBasicParsing; \"Status: $\\($r.StatusCode\\), Body length: $\\($r.Content.Length\\)\" } catch { \"Error: $_\" })",
+      "Bash(cmd.exe /c \"netstat -ano | findstr :8081\")",
+      "Bash(netstat -ano)",
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8081\" -TimeoutSec 10 -UseBasicParsing; \"HTTP $\\($r.StatusCode\\) — Metro is live on http://localhost:8081\" } catch { \"Error: $_\" })",
+      "PowerShell(Start-Sleep -Seconds 10; try { $r = Invoke-WebRequest -Uri \"http://localhost:8081\" -TimeoutSec 15 -UseBasicParsing; \"HTTP $\\($r.StatusCode\\) — Metro is live\" } catch { \"Still bundling or error: $\\($_.Exception.Message\\)\" })",
+      "Bash(Get-Content \"d:\\\\Plans\\\\aeroplanweb\\\\screens\\\\accounts\\\\AccountFormScreen.js\")",
+      "Bash(Measure-Object -Line)",
+      "PowerShell(\\(Get-Content \"d:\\\\Plans\\\\aeroplanweb\\\\screens\\\\accounts\\\\AccountFormScreen.js\"\\).Count)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit -m 'fix: dropdown z-index and solid background in target assignment form *)",
+      "Bash(git commit -m 'fix: channel names from API map + scrollable dropdown cap *)"
     ]
   }
 }

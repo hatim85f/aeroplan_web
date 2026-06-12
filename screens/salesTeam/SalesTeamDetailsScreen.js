@@ -129,7 +129,7 @@ export default function SalesTeamDetailsScreen({
 
   if (loading) {
     return (
-      <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="Sales Team">
+      <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="SalesTeam">
         <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>
       </AppShell>
     );
@@ -137,7 +137,7 @@ export default function SalesTeamDetailsScreen({
 
   if (error || !member) {
     return (
-      <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="Sales Team">
+      <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="SalesTeam">
         <View style={styles.centered}>
           <Ionicons name="alert-circle-outline" size={36} color={colors.danger} />
           <Text style={styles.errorText}>{error || 'Member not found'}</Text>
@@ -163,12 +163,12 @@ export default function SalesTeamDetailsScreen({
   const empId     = member.employeeId || member.empId || '';
 
   return (
-    <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="Sales Team">
+    <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="SalesTeam">
 
       {/* ── Breadcrumb ── */}
       <View style={styles.breadcrumb}>
         <Pressable onPress={() => navigation.navigate('SalesTeam')}>
-          <Text style={styles.breadcrumbLink}>Sales Team</Text>
+          <Text style={styles.breadcrumbLink}>Sales Team Members</Text>
         </Pressable>
         <Ionicons name="chevron-forward" size={13} color={colors.textMuted} />
         <Text style={styles.breadcrumbCurrent} numberOfLines={1}>{name}</Text>

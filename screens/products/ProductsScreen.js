@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
@@ -14,15 +14,21 @@ import { listSalesChannels } from '../../store/salesChannels/salesChannelActions
 const isManager = (role) =>
   ['admin', 'manager', 'senior_manager'].includes(String(role).toLowerCase());
 
+// 12 visually distinct hues — each adjacent pair is clearly different
 const LINE_PILL_COLORS = [
-  { bg: '#EDE9FE', text: '#5B21B6' },
-  { bg: '#DBEAFE', text: '#1D4ED8' },
-  { bg: '#FEF3C7', text: '#92400E' },
-  { bg: '#D1FAE5', text: '#065F46' },
-  { bg: '#FCE7F3', text: '#9D174D' },
-  { bg: '#FFF3E0', text: '#E65100' },
+  { bg: '#EDE9FE', text: '#5B21B6' },  // purple
+  { bg: '#FEF3C7', text: '#92400E' },  // amber
+  { bg: '#D1FAE5', text: '#065F46' },  // emerald
+  { bg: '#FCE7F3', text: '#9D174D' },  // pink
+  { bg: '#DBEAFE', text: '#1D4ED8' },  // blue
+  { bg: '#FFF3E0', text: '#E65100' },  // orange
+  { bg: '#F0FDF4', text: '#166534' },  // green
+  { bg: '#FFF1F2', text: '#9F1239' },  // rose
+  { bg: '#F0F9FF', text: '#0369A1' },  // sky
+  { bg: '#FDF4FF', text: '#7E22CE' },  // violet
+  { bg: '#ECFEF5', text: '#047857' },  // teal
+  { bg: '#FFFBEB', text: '#B45309' },  // yellow
 ];
-const lineColor = (lineId) => LINE_PILL_COLORS[(lineId || '').charCodeAt(0) % LINE_PILL_COLORS.length];
 
 function StatCard({ icon, iconColor, iconBg, label, value, sub }) {
   return (
@@ -168,6 +174,19 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
   const [statusFilter, setStatusFilter] = useState(managerRole ? '' : 'active');
   const [page, setPage] = useState(1);
   const [lines, setLines] = useState([]);
+
+  // Assign colors by sorted index so every line always gets a unique, stable color
+  const lineColorMap = useMemo(() => {
+    const sorted = [...lines].sort((a, b) =>
+      (a.lineId || a._id || '').toLowerCase().localeCompare((b.lineId || b._id || '').toLowerCase())
+    );
+    const map = {};
+    sorted.forEach((line, idx) => {
+      const id = line.lineId || line._id || '';
+      if (id) map[id] = LINE_PILL_COLORS[idx % LINE_PILL_COLORS.length];
+    });
+    return map;
+  }, [lines]);
   const [channels, setChannels] = useState([]);
   const [openMenuId, setOpenMenuId] = useState(null);
 
@@ -349,7 +368,7 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
             const lineId = product.lineId || product.line?.lineId || '—';
             const lineName = product.lineName || product.line?.lineName || product.line?.name || lineId;
             const active = product.isActive !== false && product.status !== 'inactive';
-            const lc = lineColor(lineId);
+            const lc = lineColorMap[lineId] ?? LINE_PILL_COLORS[0];
             const cpList = Array.isArray(product.channelPricing) ? product.channelPricing : [];
             const focPct = cpList.find((cp) => cp.defaultFocPercentage > 0)?.defaultFocPercentage ?? null;
             const menuOpen = openMenuId === id;

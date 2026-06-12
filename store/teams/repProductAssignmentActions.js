@@ -26,7 +26,7 @@ export const getRepProductAssignments = async (token, medicalRepId, params = {})
 
 /**
  * POST /api/medical-rep-product-assignments
- * Body: { medicalRepId, productIds: [...], startDate, endDate?, notes? }
+ * Body: { medicalRepId, productId?, products?, startDate, endDate?, percentage?, accountabilityPercentage?, notes? }
  * Response: { data: { assignments: [...], createdCount: N } }
  */
 export const createRepProductAssignment = async (token, payload) => {
@@ -37,8 +37,19 @@ export const createRepProductAssignment = async (token, payload) => {
 };
 
 /**
+ * POST /api/medical-rep-product-assignments/bulk
+ * Body: { assignments: [{ medicalRepId, productId, startDate, endDate?, percentage? }] }
+ */
+export const bulkCreateRepProductAssignments = async (token, payload) => {
+  const result = await apiRequest('/medical-rep-product-assignments/bulk', {
+    token, method: 'POST', body: payload,
+  });
+  return result?.data || result;
+};
+
+/**
  * PATCH /api/medical-rep-product-assignments/:id
- * Body: { startDate?, endDate?, notes? }
+ * Body: { startDate?, endDate?, percentage?, accountabilityPercentage?, notes? }
  */
 export const updateRepProductAssignment = async (token, id, payload) => {
   const result = await apiRequest(`/medical-rep-product-assignments/${id}`, {

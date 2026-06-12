@@ -211,7 +211,14 @@ function OverviewTab({ team, hierarchy, members }) {
 }
 
 /* ─── Members Tab ───────────────────────────────────────────────────────── */
-function MembersTab({ members, isManagerRole, token, teamId, onRefresh }) {
+function fmtJoinDate(d) {
+  if (!d) return null;
+  return new Date(d).toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  });
+}
+
+function MembersTab({ members, isManagerRole, token, teamId, teamName, onRefresh, navigation }) {
   const [removingId, setRemovingId] = useState(null);
 
   const handleRemove = async (userId) => {
@@ -236,42 +243,79 @@ function MembersTab({ members, isManagerRole, token, teamId, onRefresh }) {
     );
   }
 
+  const sorted = [...members].sort((a, b) => {
+    const activeA = a.isActive !== false && a.status !== 'inactive' ? 0 : 1;
+    const activeB = b.isActive !== false && b.status !== 'inactive' ? 0 : 1;
+    if (activeA !== activeB) return activeA - activeB; // active first
+    const dA = new Date(a.joinedAt || a.joinDate || a.addedAt || a.createdAt || 0).getTime();
+    const dB = new Date(b.joinedAt || b.joinDate || b.addedAt || b.createdAt || 0).getTime();
+    return dA - dB; // oldest join date first within each group
+  });
+
   return (
     <View>
-      {members.map((m, idx) => {
-        const uid = m._id || m.id || m.userId;
-        const name = m.fullName || m.name || m.displayName || "Unknown";
-        const appId = m.appId || m.representativeId || "—";
-        const role = m.role || m.title || "";
-        const pic = getProfilePicture(m);
+      {/* Header row */}
+      <View style={styles.memberListHeader}>
+        <Text style={styles.memberListHeaderText}>
+          {members.length} member{members.length !== 1 ? "s" : ""} · sorted by join date
+        </Text>
+      </View>
+
+      {sorted.map((m, idx) => {
+        const uid      = m.medicalRepId || m._id || m.id || m.userId;
+        const name     = m.fullName || m.name || m.displayName || "Unknown";
+        const appId    = m.appId || m.representativeId || "—";
+        const role     = m.role || m.title || "";
+        const pic      = getProfilePicture(m);
+        const isActive = m.isActive !== false && m.status !== "inactive";
+        const joinDate = fmtJoinDate(m.joinedAt || m.joinDate || m.addedAt || m.createdAt);
+
         return (
-          <View key={uid || idx} style={styles.memberRow}>
+          <Pressable
+            key={uid || idx}
+            style={styles.memberRow}
+            onPress={() =>
+              navigation.navigate("TeamMemberDetail", {
+                medicalRepId: uid,
+                member: m,
+                teamId,
+                teamName,
+              })
+            }
+          >
             <Avatar name={name} size={38} imageUrl={pic} />
+
             <View style={styles.memberInfo}>
-              <Text style={styles.memberName}>{name}</Text>
+              <View style={styles.memberNameRow}>
+                <Text style={styles.memberName}>{name}</Text>
+                <View style={[styles.statusDot, { backgroundColor: isActive ? colors.success : colors.danger }]} />
+                <Text style={[styles.memberStatusText, { color: isActive ? colors.success : colors.danger }]}>
+                  {isActive ? "Active" : "Not active"}
+                </Text>
+              </View>
               <Text style={styles.memberAppId}>
-                {appId}
-                {role ? ` · ${role}` : ""}
+                {appId}{role ? ` · ${role}` : ""}
+                {joinDate ? `  ·  Joined ${joinDate}` : ""}
               </Text>
             </View>
-            {isManagerRole && (
-              <Pressable
-                style={styles.removeBtn}
-                onPress={() => handleRemove(uid)}
-                disabled={removingId === uid}
-              >
-                {removingId === uid ? (
-                  <ActivityIndicator size={14} color={colors.danger} />
-                ) : (
-                  <Ionicons
-                    name="person-remove-outline"
-                    size={15}
-                    color={colors.danger}
-                  />
-                )}
-              </Pressable>
-            )}
-          </View>
+
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+              {isManagerRole && (
+                <Pressable
+                  style={styles.removeBtn}
+                  onPress={(e) => { e.stopPropagation?.(); handleRemove(uid); }}
+                  disabled={removingId === uid}
+                >
+                  {removingId === uid ? (
+                    <ActivityIndicator size={14} color={colors.danger} />
+                  ) : (
+                    <Ionicons name="person-remove-outline" size={15} color={colors.danger} />
+                  )}
+                </Pressable>
+              )}
+            </View>
+          </Pressable>
         );
       })}
     </View>
@@ -950,7 +994,9 @@ export default function TeamDetailScreen({
                   isManagerRole={isManagerRole}
                   token={token}
                   teamId={teamId}
+                  teamName={name}
                   onRefresh={fetchTeam}
+                  navigation={navigation}
                 />
               )}
               {activeTab === "Invitations" && (
@@ -1263,18 +1309,30 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundColor,
   },
 
+  memberListHeader: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: colors.backgroundColor,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  memberListHeaderText: { fontSize: 11, fontWeight: "600", color: colors.textMuted },
+
   memberRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   memberInfo: { flex: 1 },
-  memberName: { fontSize: 13, fontWeight: "700", color: colors.textPrimary },
-  memberAppId: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
+  memberNameRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  memberName:   { fontSize: 13, fontWeight: "700", color: colors.textPrimary },
+  statusDot:    { width: 6, height: 6, borderRadius: 3 },
+  memberStatusText: { fontSize: 11, fontWeight: "600" },
+  memberAppId:  { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   removeBtn: {
     width: 30,
     height: 30,

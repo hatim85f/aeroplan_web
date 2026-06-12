@@ -243,12 +243,12 @@ export default function SalesTeamScreen({ navigation, userDetails, appMetadata, 
       userDetails={userDetails}
       appMetadata={appMetadata}
       onSignOut={onSignOut}
-      activeRoute="Sales Team"
+      activeRoute="SalesTeam"
     >
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <View style={styles.pageHeader}>
         <View>
-          <Text style={styles.pageTitle}>Sales Team</Text>
+          <Text style={styles.pageTitle}>Sales Team Members</Text>
           <Text style={styles.pageSubtitle}>
             Manage salespeople linked to accounts and order communication
           </Text>

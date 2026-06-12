@@ -11,6 +11,7 @@ import {
   listOrders, updateOrderStatus, deleteOrder, markOrderEmailSent, getCurrentUser,
 } from '../../store/orders/orderActions';
 import { listSalesChannels } from '../../store/salesChannels/salesChannelActions';
+import { matchSalesOrders, waitForMatchJob } from '../../store/sales/salesActions';
 
 const isManager = (role) =>
   ['admin', 'manager', 'senior_manager'].includes(String(role).toLowerCase());
@@ -181,6 +182,7 @@ export default function OrdersScreen({ navigation, userDetails, appMetadata, onS
 
   const [channels,     setChannels]     = useState([]);
   const [matching,     setMatching]     = useState(null);
+  const [matchingSales,setMatchingSales]= useState(false);
   const [deleting,     setDeleting]     = useState(null);
   const [emailFallback,setEmailFallback]= useState(null);
 
@@ -301,6 +303,24 @@ export default function OrdersScreen({ navigation, userDetails, appMetadata, onS
 
   const clearFilters = () => { setSearch(''); setFilterStatus(''); setFilterChan(''); };
 
+  const runSalesMatch = async () => {
+    if (!window.confirm('Match all sales records against submitted orders? Orders found in sales will be marked "Matched in Sales".')) return;
+    try {
+      setMatchingSales(true);
+      const now = new Date();
+      const start = await matchSalesOrders(token, { year: now.getFullYear(), month: now.getMonth() + 1 });
+      const result = start?.started ? await waitForMatchJob(token, 'orders') : start;
+      const matched = result?.matchedCount ?? 0;
+      const review = result?.needsReviewCount ?? 0;
+      window.alert(`Matching completed: ${matched} matched, ${review} need review.`);
+      await fetchOrders(1);
+    } catch (err) {
+      window.alert(err.message || 'Sales matching failed.');
+    } finally {
+      setMatchingSales(false);
+    }
+  };
+
   const statsTotal   = summary?.totalOrders    ?? pagination.total;
   const statsCreated = summary?.createdCount   ?? orders.filter((o) => o.status === 'created').length;
   const statsMatched = summary?.matchedCount   ?? orders.filter((o) => o.status === 'matched_in_sales').length;
@@ -328,6 +348,18 @@ export default function OrdersScreen({ navigation, userDetails, appMetadata, onS
           </View>
         </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
+          {managerRole ? (
+            <Pressable
+              style={[styles.btnHistory, matchingSales && { opacity: 0.55 }]}
+              disabled={matchingSales}
+              onPress={runSalesMatch}
+            >
+              <Ionicons name={matchingSales ? 'sync-outline' : 'git-compare-outline'} size={14} color={colors.primary} />
+              <Text style={[styles.btnHistoryText, { color: colors.primary }]}>
+                {matchingSales ? 'Matching…' : 'Run Sales Match'}
+              </Text>
+            </Pressable>
+          ) : null}
           <Pressable
             style={styles.btnHistory}
             onPress={() => navigation.navigate('OrderHistory')}

@@ -1,10 +1,19 @@
 import { mainLink } from './mainLink';
 
 export const parseApiResponse = async (response) => {
+  if (response.status === 304) {
+    const err = new Error('Server returned a cached empty response. Please refresh and try again.');
+    err.status = response.status;
+    throw err;
+  }
+
   const result = await response.json().catch(() => ({}));
 
   if (!response.ok || result.success === false) {
-    throw new Error(result.message || 'Something went wrong. Please try again.');
+    const err = new Error(result.message || 'Something went wrong. Please try again.');
+    Object.assign(err, result);
+    err.status = response.status;
+    throw err;
   }
 
   return result;

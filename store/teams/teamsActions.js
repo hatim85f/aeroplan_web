@@ -72,17 +72,32 @@ export const getTeamPermissions = async (token, teamId) => {
   return result?.data || result?.permissions || result || [];
 };
 
+const pickUnique = (list) => {
+  const seen = new Set();
+  return list.filter((m) => {
+    const id = m.userId || m._id || m.medicalRepId || m.id;
+    if (!id || seen.has(String(id))) return false;
+    seen.add(String(id));
+    return true;
+  });
+};
+
+const chunk = (arr, size) => {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+};
+
 /**
  * Fetch every medical rep across all teams in a single flattened list.
- * First tries members embedded in the team objects; falls back to per-team
- * member calls if the list endpoint doesn't embed them.
- * Each returned object has at minimum: userId, fullName, teamName.
+ * Uses getMyTeams which returns members embedded — no extra per-team requests.
+ * Falls back to batched per-team calls (5 at a time) if members aren't embedded.
  */
 export const listAllMedicalReps = async (token) => {
-  const teams = await getTeams(token);
+  /* getMyTeams embeds members[] on each team — avoids N extra round-trips */
+  const teams = await getMyTeams(token);
   const teamsArr = Array.isArray(teams) ? teams : [];
 
-  // Try extracting members already embedded in team objects
   const embedded = teamsArr.flatMap((t) => {
     const ms = t.members || t.teamMembers || t.medicalReps || [];
     return Array.isArray(ms)
@@ -90,30 +105,25 @@ export const listAllMedicalReps = async (token) => {
       : [];
   });
 
-  const pickUnique = (list) => {
-    const seen = new Set();
-    return list.filter((m) => {
-      const id = m.userId || m._id || m.medicalRepId || m.id;
-      if (!id || seen.has(String(id))) return false;
-      seen.add(String(id));
-      return true;
-    });
-  };
-
   if (embedded.length > 0) return pickUnique(embedded);
 
-  // Fallback: one request per team
-  const arrays = await Promise.all(
-    teamsArr.map((t) =>
-      getTeamMembers(token, t._id || t.teamId || t.id)
-        .then((ms) =>
-          (Array.isArray(ms) ? ms : []).map((m) => ({
-            ...m,
-            _teamName: t.teamName || t.name || '',
-          }))
-        )
-        .catch(() => [])
-    )
-  );
-  return pickUnique(arrays.flat());
+  /* Fallback: fetch members in batches of 5 teams to avoid server overload */
+  const batches = chunk(teamsArr, 5);
+  const all = [];
+  for (const batch of batches) {
+    const results = await Promise.all(
+      batch.map((t) =>
+        getTeamMembers(token, t._id || t.teamId || t.id)
+          .then((ms) =>
+            (Array.isArray(ms) ? ms : []).map((m) => ({
+              ...m,
+              _teamName: t.teamName || t.name || '',
+            }))
+          )
+          .catch(() => [])
+      )
+    );
+    all.push(...results.flat());
+  }
+  return pickUnique(all);
 };

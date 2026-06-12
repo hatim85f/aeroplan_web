@@ -3,6 +3,39 @@ import { StyleSheet } from 'react-native';
 
 const Stack = createStackNavigator();
 
+// Friendly browser-tab titles (instead of raw route names like "PlanningDashboard").
+const TITLE_OVERRIDES = {
+  Home: 'Dashboard',
+  MyTasks: 'My Tasks',
+  TeamTasks: 'Team Tasks',
+  TaskDashboard: 'Task',
+  TaskReports: 'Task Reports',
+  FocLookup: 'FOC Lookup',
+  FocOverridesList: 'FOC Overrides',
+  FocOverrideForm: 'FOC Override',
+  FocOverrideDetails: 'FOC Override',
+  RepCoverage: 'Rep Coverage',
+  SharedSalesRules: 'Shared Sales Rules',
+  ManualSalesEntry: 'Manual Sales Entry',
+  ProductSalesRecords: 'Product Sales',
+  SalesChannelBreakdown: 'Sales by Channel',
+  ForecastMatching: 'Forecast vs Sales',
+  MyTargetDashboard: 'My Targets',
+  TargetDashboard: 'Target Dashboard',
+  PrivacyPolicy: 'Privacy Policy',
+  Terms: 'Terms & Conditions',
+  ChangePassword: 'Change Password',
+  Feedback: 'Feedback',
+};
+
+const prettyTitle = (name) => {
+  const label = TITLE_OVERRIDES[name] || String(name || '')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2') // PlanningDashboard -> Planning Dashboard
+    .replace(/\bFoc\b/g, 'FOC')
+    .trim();
+  return label || 'AeroPlan';
+};
+
 export default function MainNavigator({ userDetails, appMetadata, onSignOut }) {
   const HomeScreen = require('../screens/home/HomeScreen').default;
   const AccountsScreen = require('../screens/accounts/AccountsScreen').default;
@@ -37,8 +70,23 @@ export default function MainNavigator({ userDetails, appMetadata, onSignOut }) {
   const OrderDetailsScreen = require('../screens/orders/OrderDetailsScreen').default;
   const OrderHistoryScreen = require('../screens/orders/OrderHistoryScreen').default;
 
+  const SalesOverviewScreen    = require('../screens/sales/SalesOverviewScreen').default;
+  const SalesUploadScreen      = require('../screens/sales/SalesUploadScreen').default;
+  const SalesRecordsScreen     = require('../screens/sales/SalesRecordsScreen').default;
+  const SalesRecordDetailScreen= require('../screens/sales/SalesRecordDetailScreen').default;
+  const SalesBatchesScreen     = require('../screens/sales/SalesBatchesScreen').default;
+  const SalesBatchDetailScreen = require('../screens/sales/SalesBatchDetailScreen').default;
+  const SalesMappingsScreen    = require('../screens/sales/SalesMappingsScreen').default;
+  const SalesAreasScreen       = require('../screens/sales/SalesAreasScreen').default;
+  const SharedSalesRulesScreen = require('../screens/sales/SharedSalesRulesScreen').default;
+  const ManualSalesEntryScreen           = require('../screens/sales/ManualSalesEntryScreen').default;
+  const SalesChannelBreakdownScreen      = require('../screens/sales/SalesChannelBreakdownScreen').default;
+  const SalesTableScreen                 = require('../screens/sales/SalesTableScreen').default;
+  const ProductSalesRecordsScreen        = require('../screens/sales/ProductSalesRecordsScreen').default;
+
   const TargetDashboardScreen         = require('../screens/targets/TargetDashboardScreen').default;
   const MyTargetDashboardScreen       = require('../screens/targets/MyTargetDashboardScreen').default;
+  const MyProductsScreen              = require('../screens/targets/MyProductsScreen').default;
   const TargetAssignmentsScreen       = require('../screens/targets/TargetAssignmentsScreen').default;
   const TargetAssignmentFormScreen    = require('../screens/targets/TargetAssignmentFormScreen').default;
   const TargetAssignmentDetailsScreen = require('../screens/targets/TargetAssignmentDetailsScreen').default;
@@ -46,9 +94,32 @@ export default function MainNavigator({ userDetails, appMetadata, onSignOut }) {
   const TargetPhasingFormScreen       = require('../screens/targets/TargetPhasingFormScreen').default;
   const TargetBulkImportScreen        = require('../screens/targets/TargetBulkImportScreen').default;
 
+  const ForecastTeamScreen    = require('../screens/forecasts/ForecastTeamScreen').default;
+  const ForecastDetailsScreen = require('../screens/forecasts/ForecastDetailsScreen').default;
+  const MyForecastScreen      = require('../screens/forecasts/MyForecastScreen').default;
+  const ForecastMatchingScreen = require('../screens/forecasts/ForecastMatchingScreen').default;
+  const AchievementScreen      = require('../screens/achievements/AchievementScreen').default;
+  const RepCoverageScreen      = require('../screens/management/RepCoverageScreen').default;
+  const StockAccountsScreen        = require('../screens/stockAccounts/StockAccountsScreen').default;
+  const StockAccountDetailsScreen  = require('../screens/stockAccounts/StockAccountDetailsScreen').default;
+  const PlanningAccountsScreen     = require('../screens/planning/PlanningAccountsScreen').default;
+  const PlanningCalendarScreen     = require('../screens/planning/PlanningCalendarScreen').default;
+  const PlanningDashboardScreen    = require('../screens/planning/PlanningDashboardScreen').default;
+  const PlanningReportsScreen      = require('../screens/planning/PlanningReportsScreen').default;
+  const TasksScreen                = require('../screens/tasks/TasksScreen').default;
+  const TaskDashboardScreen        = require('../screens/tasks/TaskDashboardScreen').default;
+  const TaskReportsScreen          = require('../screens/tasks/TaskReportsScreen').default;
+  const NotificationsScreen        = require('../screens/notifications/NotificationsScreen').default;
+
+  const SettingsScreen             = require('../screens/settings/SettingsScreen').default;
+  const PrivacyPolicyScreen        = require('../screens/settings/PrivacyPolicyScreen').default;
+  const TermsScreen                = require('../screens/settings/TermsScreen').default;
+  const ChangePasswordScreen       = require('../screens/settings/ChangePasswordScreen').default;
+  const FeedbackScreen             = require('../screens/settings/FeedbackScreen').default;
+
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: styles.card }}>
-      <Stack.Screen name="Home" options={{ title: 'AeroPlan' }}>
+    <Stack.Navigator screenOptions={({ route }) => ({ headerShown: false, cardStyle: styles.card, title: prettyTitle(route.name) })}>
+      <Stack.Screen name="Home">
         {(props) => (
           <HomeScreen
             {...props}
@@ -335,12 +406,56 @@ export default function MainNavigator({ userDetails, appMetadata, onSignOut }) {
         )}
       </Stack.Screen>
 
+      {/* ── Sales ───────────────────────────────────────────────────── */}
+      <Stack.Screen name="SalesOverview">
+        {(props) => <SalesOverviewScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="SalesUpload">
+        {(props) => <SalesUploadScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="SalesRecords">
+        {(props) => <SalesRecordsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="SalesRecordDetail">
+        {(props) => <SalesRecordDetailScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="SalesBatches">
+        {(props) => <SalesBatchesScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="SalesBatchDetail">
+        {(props) => <SalesBatchDetailScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="SalesMappings">
+        {(props) => <SalesMappingsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="SalesAreas">
+        {(props) => <SalesAreasScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="SharedSalesRules">
+        {(props) => <SharedSalesRulesScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="ManualSalesEntry">
+        {(props) => <ManualSalesEntryScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="SalesChannelBreakdown">
+        {(props) => <SalesChannelBreakdownScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="SalesTable">
+        {(props) => <SalesTableScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="ProductSalesRecords">
+        {(props) => <ProductSalesRecordsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+
       {/* ── Targeting & Forecast ─────────────────────────────────────── */}
       <Stack.Screen name="TargetDashboard">
         {(props) => <TargetDashboardScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
       </Stack.Screen>
       <Stack.Screen name="MyTargetDashboard">
         {(props) => <MyTargetDashboardScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="MyProducts">
+        {(props) => <MyProductsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
       </Stack.Screen>
       <Stack.Screen name="TargetAssignments">
         {(props) => <TargetAssignmentsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
@@ -359,6 +474,78 @@ export default function MainNavigator({ userDetails, appMetadata, onSignOut }) {
       </Stack.Screen>
       <Stack.Screen name="TargetBulkImport">
         {(props) => <TargetBulkImportScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="ForecastTeam">
+        {(props) => <ForecastTeamScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="ForecastDetails">
+        {(props) => <ForecastDetailsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="MyForecast">
+        {(props) => <MyForecastScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="ForecastMatching">
+        {(props) => <ForecastMatchingScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="Achievement">
+        {(props) => <AchievementScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="RepCoverage">
+        {(props) => <RepCoverageScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="StockAccounts">
+        {(props) => <StockAccountsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="StockAccountDetails">
+        {(props) => <StockAccountDetailsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="PlanningCalendar">
+        {(props) => <PlanningCalendarScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="PlanningAccounts">
+        {(props) => <PlanningAccountsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="PlanningDashboard">
+        {(props) => <PlanningDashboardScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="PlanningReports">
+        {(props) => <PlanningReportsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+
+      {/* ── Tasks ────────────────────────────────────────────────────── */}
+      <Stack.Screen name="MyTasks">
+        {(props) => <TasksScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="TeamTasks">
+        {(props) => <TasksScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="TaskDashboard">
+        {(props) => <TaskDashboardScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="TaskReports">
+        {(props) => <TaskReportsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+
+      {/* ── Notifications ────────────────────────────────────────────── */}
+      <Stack.Screen name="Notifications">
+        {(props) => <NotificationsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+
+      {/* ── Settings & Legal ─────────────────────────────────────────── */}
+      <Stack.Screen name="Settings">
+        {(props) => <SettingsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="PrivacyPolicy">
+        {(props) => <PrivacyPolicyScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="Terms">
+        {(props) => <TermsScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="ChangePassword">
+        {(props) => <ChangePasswordScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
+      </Stack.Screen>
+      <Stack.Screen name="Feedback">
+        {(props) => <FeedbackScreen {...props} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} />}
       </Stack.Screen>
     </Stack.Navigator>
   );

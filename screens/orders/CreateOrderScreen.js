@@ -9,6 +9,7 @@ import { colors } from '../../constants/colors';
 import { globalHeight, globalWidth } from '../../constants/globalWidth';
 import { getAccounts } from '../../store/accounts/accountActions';
 import { apiRequest } from '../../store/apiClient';
+import OrderTargetProgress from './OrderTargetProgress';
 import {
   createOrder, getOrderInitData, markOrderEmailSent, getCurrentUser,
 } from '../../store/orders/orderActions';
@@ -611,6 +612,22 @@ export default function CreateOrderScreen({ navigation, route, userDetails, appM
     }, { totalQty: 0, totalFocQty: 0, totalCifUsd: 0, totalWholesaleAed: 0 });
   }, [orderItems, selectedChannel]);
 
+  const targetProgressItems = useMemo(() => {
+    const channelId = selectedChannel?._id || selectedChannel?.id;
+    return orderItems.map((item) => {
+      if (!item.productData) return null;
+      const qty = parseInt(item.quantity) || 0;
+      if (qty <= 0) return null;
+      const prices = getChannelPrice(item.productData, channelId);
+      return {
+        productId: item.productId || item.productData?._id || item.productData?.id || '',
+        cifUsd: qty * (Number(prices.unitCifUsd) || 0),
+        wholesaleAed: qty * (Number(prices.unitWholesaleAed) || 0),
+        retailAed: qty * (Number(prices.unitRetailAed) || 0),
+      };
+    }).filter(Boolean);
+  }, [orderItems, selectedChannel]);
+
   // ── Channels visible in Step 2
   const allChannels = (initData?.availableOrderChannels || []).length > 0
     ? initData.availableOrderChannels
@@ -1188,6 +1205,13 @@ export default function CreateOrderScreen({ navigation, route, userDetails, appM
                     </View>
                   ))}
                 </View>
+
+                <OrderTargetProgress
+                  channelId={selectedChannel?._id || selectedChannel?.id}
+                  items={targetProgressItems}
+                  token={token}
+                  userDetails={userDetails}
+                />
 
                 <View style={styles.summarySection}>
                   <Text style={styles.summarySectionTitle}>Notes (Optional)</Text>

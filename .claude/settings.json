@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(Get-ChildItem \"d:\\\\Plans\\\\aeroplanweb\" | Where-Object { $_.Name -ne \"node_modules\" } | Select-Object Name, PSIsContainer)"
+      "PowerShell(Get-ChildItem \"d:\\\\Plans\\\\aeroplanweb\" | Where-Object { $_.Name -ne \"node_modules\" } | Select-Object Name, PSIsContainer)",
+      "Bash(git commit -m ' *)",
+      "Bash(git commit -m 'feat: target assignments table fills full screen height *)"
     ]
   }
 }

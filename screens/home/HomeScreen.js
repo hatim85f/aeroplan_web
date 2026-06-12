@@ -1,91 +1,234 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
   Image, Pressable, ScrollView,
   StyleSheet, Text, View,
 } from 'react-native';
 import Svg, {
-  Path, Circle, Rect, Defs,
-  LinearGradient, Stop,
+  Rect,
   Line as SvgLine, Text as SvgText,
 } from 'react-native-svg';
 
 import { colors } from '../../constants/colors';
 import { globalHeight, globalWidth } from '../../constants/globalWidth';
 import { getProfilePicture } from '../../constants/profile';
+import { canManageStructure } from '../../constants/roles';
 import AppSidebar from '../../components/AppSidebar';
 import AppTopBar from '../../components/AppTopBar';
+import { getSalesOverview } from '../../store/sales/salesActions';
+import { getMyForecast, getTeamForecasts } from '../../store/forecasts/forecastActions';
+import { getMyAchievement, getTeamAchievement } from '../../store/achievements/achievementActions';
+import { getManagerDashboard, getMyCalendar } from '../../store/planning/planningActions';
+import { getNotifications } from '../../store/notifications/notificationActions';
 
 const landingImage = require('../../assets/images/landing_image.png');
 
-const PLAN_ROWS = [
-  {
-    color: '#8B5CF6', initials: 'DS', name: 'Dr. Sarah Clinic',
-    sub: 'Visit & Discussion', region: 'North Region', area: 'North Zone',
-    time: '10:30 AM', status: 'Scheduled', isFirst: true,
-  },
-  {
-    color: '#1677FF', initials: 'CM', name: 'City Medical Center',
-    sub: 'Doctor Visit', region: 'East Zone', area: 'Central Area',
-    time: '12:00 PM', status: 'Planned',
-  },
-  {
-    color: '#22C55E', initials: 'AN', name: 'Al Noor Pharmacy',
-    sub: 'Order Follow-up', region: 'West Zone', area: 'West Area',
-    time: '02:30 PM', status: 'Planned',
-  },
-  {
-    color: '#F97316', initials: 'LC', name: 'Life Care Hospital',
-    sub: 'Product Presentation', region: 'South Region', area: 'South Area',
-    time: '04:00 PM', status: 'Planned',
-  },
-];
-
 const QUICK_ACTIONS = [
-  { icon: 'cart', label: 'Add Order', color: '#F97316', bg: '#FFF4EE' },
-  { icon: 'stats-chart', label: 'Modify Forecast', color: '#0F6FFF', bg: '#EEF4FF' },
-  { icon: 'calendar', label: 'New Daily Plan', color: '#8B5CF6', bg: '#F3EEFF' },
-  { icon: 'document-text', label: 'Check Sales\nDetails', color: '#0F6FFF', bg: '#EEF4FF' },
+  { icon: 'cart', label: 'Add Order', color: '#F97316', bg: '#FFF4EE', action: 'addOrder' },
+  { icon: 'stats-chart', label: 'Modify Forecast', color: '#0F6FFF', bg: '#EEF4FF', action: 'forecast' },
+  { icon: 'calendar', label: 'New Daily Plan', color: '#8B5CF6', bg: '#F3EEFF', action: 'plan' },
+  { icon: 'document-text', label: 'Check Sales\nDetails', color: '#0F6FFF', bg: '#EEF4FF', action: 'sales' },
 ];
 
-const ACTIVITY_ROWS = [
-  { icon: 'checkmark-circle', iconColor: '#22C55E', title: 'Order #SO-1256 completed', sub: 'City Medical Center', time: '10:15 AM' },
-  { icon: 'calendar', iconColor: colors.primary, title: 'New plan created', sub: '8 activities planned for today', time: '09:30 AM' },
-  { icon: 'person-circle', iconColor: '#6B46FF', title: 'New customer added', sub: 'Health Plus Pharmacy', time: 'Yesterday' },
-];
+const STATUS_COLORS = ['#8B5CF6', '#1677FF', '#22C55E', '#F97316', '#0F6FFF', '#6B46FF'];
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const TEAM_MEMBERS = [
-  { name: 'Mona Khaled', role: 'Manager', score: 85, trend: '+12%', up: true },
-  { name: 'Omar Farooq', role: 'SR. Representative', score: 72, trend: '+8%', up: true },
-  { name: 'Yasir Ali', role: 'Representative', score: 68, trend: '-4%', up: false },
-];
+/* ─── Helpers ─────────────────────────────────────────────────────────── */
 
-const CHART_POINTS = [
-  { label: 'May 1', v: 4 },
-  { label: 'May 5', v: 9 },
-  { label: 'May 9', v: 11 },
-  { label: 'May 13', v: 16 },
-  { label: 'May 17', v: 12 },
-  { label: 'May 21', v: 19 },
-  { label: 'May 25', v: 25 },
-  { label: 'May 31', v: 18.45 },
-];
+const fmtMoney = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('en-US');
 
-const BOTTOM_NAV = [
-  { icon: 'home', label: 'Home', active: true },
-  { icon: 'people-outline', label: 'Customers' },
-  { icon: 'receipt-outline', label: 'Orders' },
-  { icon: 'notifications-outline', label: 'Notifications', badge: '3' },
-  { icon: 'grid-outline', label: 'More' },
-];
+const num = (n) => Number(n) || 0;
+
+const initialsOf = (name) =>
+  String(name || '?')
+    .trim()
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || '?';
+
+const statusPill = (planStatus) => {
+  const s = String(planStatus || '').toLowerCase();
+  if (s === 'submitted') return { label: 'Submitted', style: 'statusGreen' };
+  if (s === 'draft') return { label: 'Draft', style: 'statusBlue' };
+  return { label: planStatus ? String(planStatus) : 'Planned', style: 'statusGray' };
+};
+
+const relTime = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const diff = Date.now() - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleDateString();
+};
 
 /* ─── Root ────────────────────────────────────────────────────────────── */
 
 export default function HomeScreen({ navigation, userDetails, appMetadata, onSignOut }) {
   const user = userDetails?.user || userDetails?.data?.user || userDetails || {};
+  const token = userDetails?.token || userDetails?.data?.token || '';
   const displayName = user.displayName || user.fullName || user.name || user.userName || 'Ahmed Hassan';
   const role = user.role || user.title || 'Medical Representative';
   const profilePicture = getProfilePicture(user);
+  const isManager = canManageStructure(user);
+
+  const [loading, setLoading] = useState(true);
+  const [salesValue, setSalesValue] = useState(0);
+  const [forecastValue, setForecastValue] = useState(0);
+  const [achievement, setAchievement] = useState(null);
+  const [planRows, setPlanRows] = useState([]);
+  const [accountsToVisit, setAccountsToVisit] = useState(0);
+  const [trend, setTrend] = useState([]);
+  const [teamRows, setTeamRows] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+
+  const load = useCallback(async () => {
+    if (!token) { setLoading(false); return; }
+    setLoading(true);
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const todayISO = `${year}-${String(month).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const overviewP = getSalesOverview(token, { year, month });
+    const forecastP = isManager
+      ? getTeamForecasts(token, { year, month })
+      : getMyForecast(token, { year, month });
+    const achievementP = isManager
+      ? getTeamAchievement(token, { year, month })
+      : getMyAchievement(token, { year, month });
+    const planP = isManager
+      ? getManagerDashboard(token, { date: todayISO })
+      : getMyCalendar(token, { startDate: todayISO, endDate: todayISO });
+    const notifP = getNotifications(token);
+
+    // Build last-6-months sales series requests.
+    const trendReqs = [];
+    for (let i = 5; i >= 0; i -= 1) {
+      const dt = new Date(year, month - 1 - i, 1);
+      const Y = dt.getFullYear();
+      const M = dt.getMonth() + 1;
+      trendReqs.push({ Y, M, label: MONTH_SHORT[dt.getMonth()] });
+    }
+    const trendP = Promise.all(
+      trendReqs.map((r) =>
+        getSalesOverview(token, { year: r.Y, month: r.M })
+          .then((o) => ({ label: r.label, v: num(o?.totalCalculatedCifUsd) }))
+          .catch(() => ({ label: r.label, v: 0 }))
+      )
+    );
+
+    const [overviewR, forecastR, achievementR, planR, notifR, trendR] = await Promise.allSettled([
+      overviewP, forecastP, achievementP, planP, notifP, trendP,
+    ]);
+
+    // MTD Sales — prefer the role-attributed achievement sales value (rep = own share,
+    // manager = their team). Fall back to the raw sales-overview total if achievement is unavailable.
+    if (achievementR.status === 'fulfilled' && achievementR.value?.summaryCards?.monthlySalesValue != null) {
+      setSalesValue(num(achievementR.value.summaryCards.monthlySalesValue));
+    } else if (overviewR.status === 'fulfilled') {
+      setSalesValue(num(overviewR.value?.totalCalculatedCifUsd));
+    }
+
+    // Forecast (getMyForecast/getTeamForecasts may return the raw envelope)
+    if (forecastR.status === 'fulfilled') {
+      const f = forecastR.value?.data ?? forecastR.value ?? {};
+      setForecastValue(num(
+        f.totalForecastValue ?? f.totalMonthlyTargetValue ?? f.summaryCards?.forecastValue ?? 0
+      ));
+    }
+
+    // Achievement (+ team rows for manager)
+    if (achievementR.status === 'fulfilled') {
+      const a = achievementR.value || {};
+      setAchievement(a);
+      if (isManager && Array.isArray(a.reps)) {
+        const rows = a.reps
+          .map((r) => ({
+            name: r.userName || 'Rep',
+            role: 'Representative',
+            score: Math.round(num(r.monthlyAchievementPercentage)),
+          }))
+          .sort((x, y) => y.score - x.score);
+        setTeamRows(rows);
+      }
+    }
+
+    // Today's plan + accounts-to-visit
+    if (planR.status === 'fulfilled') {
+      const p = planR.value || {};
+      if (isManager) {
+        const rows = [];
+        (p.reps || []).forEach((rep) => {
+          if (num(rep.visitsCount) > 0) {
+            (rep.visits || []).forEach((v) => {
+              rows.push({
+                accountName: v.accountName || 'Account',
+                person: rep.userName || '',
+                status: v.planStatus,
+              });
+            });
+          }
+        });
+        // Sort by rep name, then account name, for a clean grouped list.
+        rows.sort((x, y) => (x.person || '').localeCompare(y.person || '')
+          || (x.accountName || '').localeCompare(y.accountName || ''));
+        setPlanRows(rows);
+        setAccountsToVisit(num(p.summaryCards?.totalVisits));
+      } else {
+        const visits = Array.isArray(p.visits) ? p.visits : [];
+        const rows = visits.map((v) => ({
+          accountName: v.accountName || 'Account',
+          status: v.planStatus,
+        })).sort((x, y) => (x.accountName || '').localeCompare(y.accountName || ''));
+        setPlanRows(rows);
+        setAccountsToVisit(visits.length);
+      }
+    }
+
+    // Notifications
+    if (notifR.status === 'fulfilled') {
+      setNotifications(Array.isArray(notifR.value) ? notifR.value : []);
+    }
+
+    // Sales trend
+    if (trendR.status === 'fulfilled') {
+      setTrend(Array.isArray(trendR.value) ? trendR.value : []);
+    }
+
+    setLoading(false);
+  }, [token, isManager]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const goPlanning = () => navigation.navigate('PlanningCalendar');
+
+  const onQuickAction = (action) => {
+    if (action === 'addOrder') navigation.navigate('CreateOrder');
+    else if (action === 'forecast') navigation.navigate(isManager ? 'ForecastTeam' : 'MyForecast');
+    else if (action === 'plan') navigation.navigate('PlanningCalendar');
+    else if (action === 'sales') navigation.navigate('SalesOverview');
+  };
+
+  const summaryCards = achievement?.summaryCards || {};
+  const achPct = Math.round(num(summaryCards.monthlyAchievementPercentage));
+  const achTargetSub = summaryCards.monthlyTargetValue != null
+    ? `vs Target ${fmtMoney(summaryCards.monthlyTargetValue)}`
+    : 'vs Target';
+
+  const recentActivity = notifications.slice(0, 3);
+  const unreadCount = notifications.filter((n) => !n.isOpened).length;
 
   return (
     <View style={styles.shell}>
@@ -99,7 +242,7 @@ export default function HomeScreen({ navigation, userDetails, appMetadata, onSig
       />
       <View style={styles.main}>
         <AppTopBar displayName={displayName} role={role} picture={profilePicture} pendingCount={0} />
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
 
           {/* ── Greeting ─────────────────────────────────────────────── */}
           <View style={styles.greeting}>
@@ -112,9 +255,9 @@ export default function HomeScreen({ navigation, userDetails, appMetadata, onSig
             <View style={styles.aiCard}>
               <View style={styles.aiContent}>
                 <Text style={styles.aiTitle}>AI Sales Plan</Text>
-                <Text style={styles.aiBold}>8 activities planned for today</Text>
-                <Text style={styles.aiBody}>Start with North Zone to maximize your coverage.</Text>
-                <Pressable style={styles.aiBtn}>
+                <Text style={styles.aiBold}>{accountsToVisit} activit{accountsToVisit === 1 ? 'y' : 'ies'} planned for today</Text>
+                <Text style={styles.aiBody}>Start with your highest-priority accounts to maximize your coverage.</Text>
+                <Pressable style={styles.aiBtn} onPress={goPlanning}>
                   <Text style={styles.aiBtnText}>View Plan</Text>
                 </Pressable>
               </View>
@@ -125,10 +268,10 @@ export default function HomeScreen({ navigation, userDetails, appMetadata, onSig
               />
             </View>
 
-            <MetricCard icon="cash-outline"     title="MTD Sales"        value="$18,450" sub="This Month"    trend="+ 12.6% vs Last Month" />
-            <MetricCard icon="bar-chart-outline" title="Forecast"         value="$24,900" sub="This Month"    trend="+ 8.4% vs Last Month" />
-            <MetricCard icon="disc-outline"      title="MTD Achievement"  value="72%"     sub="vs Target 80%" trend="+ 5.2% vs Last Month" />
-            <MetricCard icon="calendar-outline"  title="Accounts to Visit" value="12"     sub="Planned Today" link="View Accounts" />
+            <MetricCard icon="cash-outline"     title="MTD Sales"        value={loading ? '—' : fmtMoney(salesValue)}    sub="This Month" />
+            <MetricCard icon="bar-chart-outline" title="Forecast"         value={loading ? '—' : fmtMoney(forecastValue)} sub="This Month" />
+            <MetricCard icon="disc-outline"      title="MTD Achievement"  value={loading ? '—' : `${achPct}%`}            sub={achTargetSub} />
+            <MetricCard icon="calendar-outline"  title="Accounts to Visit" value={loading ? '—' : String(accountsToVisit)} sub="Planned Today" link="View Accounts" onLinkPress={goPlanning} />
           </View>
 
           {/* ── Body ─────────────────────────────────────────────────── */}
@@ -136,15 +279,18 @@ export default function HomeScreen({ navigation, userDetails, appMetadata, onSig
 
             {/* Left column */}
             <View style={styles.leftCol}>
-              <Panel title="Today's Plan" action={<Text style={styles.link}>View All</Text>}>
-                <PlanTable />
+              <Panel
+                title="Today's Plan"
+                action={<Text style={styles.link} onPress={goPlanning}>View All</Text>}
+              >
+                <PlanTable rows={planRows} isManager={isManager} loading={loading} onAction={goPlanning} />
               </Panel>
 
               <View style={styles.lowerRow}>
                 <Panel title="Quick Actions" style={styles.qaPanel}>
                   <View style={styles.qaGrid}>
                     {QUICK_ACTIONS.map((a) => (
-                      <Pressable key={a.label} style={styles.qaItem}>
+                      <Pressable key={a.label} style={styles.qaItem} onPress={() => onQuickAction(a.action)}>
                         <View style={[styles.qaIconBox, { backgroundColor: a.bg }]}>
                           <Ionicons name={a.icon} size={globalWidth('1.3%')} color={a.color} />
                         </View>
@@ -154,18 +300,28 @@ export default function HomeScreen({ navigation, userDetails, appMetadata, onSig
                   </View>
                 </Panel>
 
-                <Panel title="Recent Activity" action={<Text style={styles.link}>View All</Text>} style={styles.raPanel}>
+                <Panel
+                  title="Recent Activity"
+                  action={<Text style={styles.link} onPress={() => navigation.navigate('Notifications')}>View All</Text>}
+                  style={styles.raPanel}
+                >
                   <View style={styles.activityList}>
-                    {ACTIVITY_ROWS.map((r) => (
-                      <View key={r.title} style={styles.activityRow}>
-                        <Ionicons name={r.icon} size={globalWidth('1.1%')} color={r.iconColor} />
+                    {recentActivity.length ? recentActivity.map((r) => (
+                      <View key={r._id || r.title} style={styles.activityRow}>
+                        <Ionicons
+                          name={r.isOpened ? 'notifications-outline' : 'notifications'}
+                          size={globalWidth('1.1%')}
+                          color={r.isOpened ? colors.textSecondary : colors.primary}
+                        />
                         <View style={styles.activityCopy}>
-                          <Text style={styles.activityTitle}>{r.title}</Text>
-                          <Text style={styles.activitySub}>{r.sub}</Text>
+                          <Text style={styles.activityTitle} numberOfLines={1}>{r.title || 'Notification'}</Text>
+                          {!!r.subtitle && <Text style={styles.activitySub} numberOfLines={1}>{r.subtitle}</Text>}
                         </View>
-                        <Text style={styles.activityTime}>{r.time}</Text>
+                        <Text style={styles.activityTime}>{relTime(r.timeStamp || r.createdAt)}</Text>
                       </View>
-                    ))}
+                    )) : (
+                      <Text style={styles.emptyText}>No recent activity.</Text>
+                    )}
                   </View>
                 </Panel>
               </View>
@@ -174,32 +330,63 @@ export default function HomeScreen({ navigation, userDetails, appMetadata, onSig
             {/* Right column */}
             <View style={styles.rightCol}>
               <Panel
-                title="Sales Trend (MTD)"
+                title="Sales Trend (6 Months)"
                 action={
                   <View style={styles.trendActions}>
                     <View style={styles.monthPill}>
-                      <Text style={styles.monthPillText}>This Month</Text>
-                      <Ionicons name="chevron-down" size={globalWidth('0.65%')} color={colors.textSecondary} />
+                      <Text style={styles.monthPillText}>Last 6 Months</Text>
                     </View>
-                    <Ionicons name="ellipsis-horizontal" size={globalWidth('0.9%')} color={colors.textSecondary} />
                   </View>
                 }
               >
-                <SalesTrendChart />
+                <SalesTrendChart data={trend} />
               </Panel>
 
-              <Panel title="Team Performance" action={<Text style={styles.link}>View All</Text>}>
-                {TEAM_MEMBERS.map((m) => <TeamRow key={m.name} member={m} />)}
-                <View style={styles.moreRow}>
-                  <Text style={styles.moreText}>+5 more team members</Text>
-                  <Text style={styles.link}>View All</Text>
-                </View>
-              </Panel>
+              {isManager ? (
+                <Panel
+                  title="Team Performance"
+                  action={<Text style={styles.link} onPress={() => navigation.navigate('Achievement')}>View All</Text>}
+                >
+                  {teamRows.length ? (
+                    <>
+                      {teamRows.slice(0, 5).map((m, i) => <TeamRow key={m.name + i} member={m} index={i} />)}
+                      {teamRows.length > 5 && (
+                        <View style={styles.moreRow}>
+                          <Text style={styles.moreText}>+{teamRows.length - 5} more team members</Text>
+                          <Text style={styles.link} onPress={() => navigation.navigate('Achievement')}>View All</Text>
+                        </View>
+                      )}
+                    </>
+                  ) : (
+                    <Text style={styles.emptyText}>{loading ? 'Loading…' : 'No team data yet.'}</Text>
+                  )}
+                </Panel>
+              ) : (
+                <Panel
+                  title="Your Achievement"
+                  action={<Text style={styles.link} onPress={() => navigation.navigate('Achievement')}>View All</Text>}
+                >
+                  <View style={styles.achWrap}>
+                    <Text style={styles.achBig}>{loading ? '—' : `${achPct}%`}</Text>
+                    <Text style={styles.achCaption}>Monthly Achievement</Text>
+                    <View style={styles.achRow}>
+                      <View style={styles.achStat}>
+                        <Text style={styles.achStatLabel}>Target</Text>
+                        <Text style={styles.achStatValue}>{fmtMoney(summaryCards.monthlyTargetValue)}</Text>
+                      </View>
+                      <View style={styles.achStat}>
+                        <Text style={styles.achStatLabel}>Sales</Text>
+                        <Text style={styles.achStatValue}>{fmtMoney(summaryCards.monthlySalesValue)}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </Panel>
+              )}
             </View>
 
           </View>
         </ScrollView>
-        <BottomNav />
+        <BottomNav navigation={navigation} unreadCount={unreadCount} />
       </View>
     </View>
   );
@@ -207,7 +394,7 @@ export default function HomeScreen({ navigation, userDetails, appMetadata, onSig
 
 /* ─── MetricCard ──────────────────────────────────────────────────────── */
 
-function MetricCard({ icon, title, value, sub, trend, link }) {
+function MetricCard({ icon, title, value, sub, trend, link, onLinkPress }) {
   return (
     <View style={styles.metricCard}>
       <View style={styles.metricIconBox}>
@@ -217,7 +404,7 @@ function MetricCard({ icon, title, value, sub, trend, link }) {
       <Text style={styles.metricValue}>{value}</Text>
       <Text style={styles.metricSub}>{sub}</Text>
       {trend && <Text style={styles.metricTrend}>{trend}</Text>}
-      {link && <Text style={styles.metricLink}>{link}</Text>}
+      {link && <Text style={styles.metricLink} onPress={onLinkPress}>{link}</Text>}
     </View>
   );
 }
@@ -238,163 +425,174 @@ function Panel({ title, action, children, style }) {
 
 /* ─── Plan Table ──────────────────────────────────────────────────────── */
 
-function PlanTable() {
+function PlanTable({ rows = [], isManager = false, loading = false, onAction }) {
   return (
     <View style={styles.table}>
       {/* Header */}
       <View style={styles.tableHead}>
-        <Text style={[styles.headCell, styles.colAccount]}>Account / Activity</Text>
-        <Text style={[styles.headCell, styles.colTerritory]}>Territory / Area</Text>
-        <Text style={[styles.headCell, styles.colTime]}>Time</Text>
+        <Text style={[styles.headCell, styles.colAccount]}>Account{isManager ? ' / Rep' : ''}</Text>
         <Text style={[styles.headCell, styles.colStatus]}>Status</Text>
         <Text style={[styles.headCell, styles.colAction]}>Action</Text>
       </View>
 
-      {PLAN_ROWS.map((row) => (
-        <View key={row.name} style={styles.tableRow}>
-          {/* Account */}
-          <View style={[styles.rowCell, styles.colAccount]}>
-            <View style={[styles.accountCircle, { backgroundColor: row.color }]}>
-              <Text style={styles.accountInitials}>{row.initials}</Text>
-            </View>
-            <View>
-              <Text style={styles.accountName}>{row.name}</Text>
-              <Text style={styles.accountSub}>{row.sub}</Text>
-            </View>
-          </View>
-
-          {/* Territory */}
-          <View style={[styles.rowCell, styles.colTerritory]}>
-            <Text style={styles.cellMain}>{row.region}</Text>
-            <Text style={styles.cellSub}>{row.area}</Text>
-          </View>
-
-          {/* Time */}
-          <View style={[styles.rowCellInline, styles.colTime]}>
-            <Ionicons name="time-outline" size={globalWidth('0.8%')} color={colors.textSecondary} />
-            <Text style={styles.cellMain}>{row.time}</Text>
-          </View>
-
-          {/* Status */}
-          <View style={[styles.rowCell, styles.colStatus]}>
-            <Text style={[styles.statusPill, row.isFirst ? styles.statusBlue : styles.statusGreen]}>
-              {row.status}
-            </Text>
-          </View>
-
-          {/* Action */}
-          <View style={[styles.rowCellInline, styles.colAction]}>
-            <Pressable style={row.isFirst ? styles.btnPrimary : styles.btnOutline}>
-              <Text style={row.isFirst ? styles.btnPrimaryText : styles.btnOutlineText}>
-                {row.isFirst ? 'Start Plan' : 'View Plan'}
-              </Text>
-            </Pressable>
-            <Ionicons name="ellipsis-vertical" size={globalWidth('0.85%')} color={colors.textSecondary} />
-          </View>
+      {!rows.length ? (
+        <View style={styles.tableRow}>
+          <Text style={styles.emptyText}>
+            {loading ? 'Loading…' : 'No visits planned for today.'}
+          </Text>
         </View>
-      ))}
+      ) : rows.map((row, i) => {
+        const pill = statusPill(row.status);
+        return (
+          <View key={`${row.accountName}-${i}`} style={styles.tableRow}>
+            {/* Account */}
+            <View style={[styles.rowCell, styles.colAccount]}>
+              <View style={[styles.accountCircle, { backgroundColor: STATUS_COLORS[i % STATUS_COLORS.length] }]}>
+                <Text style={styles.accountInitials}>{initialsOf(row.accountName)}</Text>
+              </View>
+              <View style={{ flexShrink: 1 }}>
+                <Text style={styles.accountName} numberOfLines={1}>{row.accountName}</Text>
+                {isManager && !!row.person && <Text style={styles.accountSub} numberOfLines={1}>{row.person}</Text>}
+              </View>
+            </View>
+
+            {/* Status */}
+            <View style={[styles.rowCell, styles.colStatus]}>
+              <Text style={[styles.statusPill, styles[pill.style]]}>{pill.label}</Text>
+            </View>
+
+            {/* Action */}
+            <View style={[styles.rowCellInline, styles.colAction]}>
+              <Pressable style={styles.btnOutline} onPress={onAction}>
+                <Text style={styles.btnOutlineText}>View Plan</Text>
+              </Pressable>
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
 }
 
 /* ─── Sales Trend SVG Chart ───────────────────────────────────────────── */
 
-function SalesTrendChart() {
+// Round a value up to a "nice" axis maximum.
+function niceMax(v) {
+  if (!v || v <= 0) return 10;
+  const pow = Math.pow(10, Math.floor(Math.log10(v)));
+  const r = v / pow;
+  let mult = 1;
+  if (r <= 1) mult = 1;
+  else if (r <= 2) mult = 2;
+  else if (r <= 5) mult = 5;
+  else mult = 10;
+  return mult * pow;
+}
+
+// Compact axis label: 18450 -> $18k, 950 -> $950.
+function axisLabel(v) {
+  if (v >= 1000) return `$${Math.round(v / 1000)}k`;
+  return `$${Math.round(v)}`;
+}
+
+function SalesTrendChart({ data = [] }) {
   const [cw, setCw] = useState(0);
   const totalH = globalHeight('17%');
-  const PL = 36, PR = 10, PT = 22, PB = 22;
+  const PL = 36, PR = 10, PT = 26, PB = 22;
   const chartW = Math.max(cw - PL - PR, 0);
   const chartH = Math.max(totalH - PT - PB, 0);
-  const MAX = 30;
-  const n = CHART_POINTS.length;
 
-  const pts = CHART_POINTS.map((d, i) => ({
-    x: PL + (i / (n - 1)) * chartW,
-    y: PT + (1 - d.v / MAX) * chartH,
-    label: d.label,
-  }));
+  const points = data.length ? data : [];
+  const rawMax = points.reduce((m, d) => Math.max(m, num(d.v)), 0);
+  const MAX = niceMax(rawMax) || 10;
+  const n = points.length;
 
-  const lineD = pts.map((p, i) =>
-    `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`
-  ).join(' ');
+  // Inactive bars stay muted; the current month is the accent.
+  const inactiveBar = colors.surfaceSoft;
+  const baselineY = PT + chartH;
 
-  const areaD = cw > 0
-    ? `${lineD} L${pts[n - 1].x.toFixed(1)},${(PT + chartH).toFixed(1)} L${PL},${(PT + chartH).toFixed(1)} Z`
-    : '';
+  // Highlight the current month — always the last point in the 6-month series.
+  const currentIdx = n - 1;
 
-  const yTicks = [30, 20, 10, 0];
-  const tooltipPt = pts[6]; // May 25 — peak
+  // Bar geometry: evenly distribute n bars across the plot width.
+  const slot = n > 0 ? chartW / n : chartW;
+  const barW = Math.max(Math.min(slot * 0.55, 26), 6);
+
+  const bars = points.map((d, i) => {
+    const v = num(d.v);
+    const h = MAX > 0 ? (v / MAX) * chartH : 0;
+    const cx = PL + slot * i + slot / 2;
+    return {
+      x: cx - barW / 2,
+      y: baselineY - h,
+      h,
+      barW,
+      cx,
+      label: d.label,
+      v,
+      active: i === currentIdx,
+    };
+  });
+
+  const yTicks = [MAX, MAX * 0.66, MAX * 0.33, 0];
 
   return (
     <View onLayout={(e) => setCw(e.nativeEvent.layout.width)} style={{ height: totalH }}>
-      {cw > 0 && (
+      {cw > 0 && n > 0 && (
         <Svg width={cw} height={totalH}>
-          <Defs>
-            <LinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0%" stopColor={colors.primary} stopOpacity="0.15" />
-              <Stop offset="100%" stopColor={colors.primary} stopOpacity="0" />
-            </LinearGradient>
-          </Defs>
-
-          {/* Y-axis grid lines + labels */}
+          {/* Y-axis gridlines + value labels */}
           {yTicks.map((val) => {
             const gy = PT + (1 - val / MAX) * chartH;
             return (
               <React.Fragment key={val}>
                 <SvgLine
                   x1={PL} y1={gy} x2={PL + chartW} y2={gy}
-                  stroke={colors.border} strokeWidth={0.8}
+                  stroke={colors.border} strokeWidth={val === 0 ? 1 : 0.8}
                 />
                 <SvgText
                   x={PL - 4} y={gy + 3.5}
-                  fontSize={8} fill={colors.textSecondary} textAnchor="end"
+                  fontSize={8} fill={colors.textMuted} textAnchor="end"
                 >
-                  {val === 0 ? '$0k' : `$${val}k`}
+                  {axisLabel(val)}
                 </SvgText>
               </React.Fragment>
             );
           })}
 
-          {/* Area */}
-          <Path d={areaD} fill="url(#grad)" />
-
-          {/* Line */}
-          <Path
-            d={lineD}
-            stroke={colors.primary} strokeWidth={2}
-            fill="none" strokeLinecap="round" strokeLinejoin="round"
-          />
-
-          {/* Dots */}
-          {pts.map((p, i) => (
-            <Circle key={i} cx={p.x} cy={p.y} r={3} fill="white" stroke={colors.primary} strokeWidth={2} />
+          {/* Bars */}
+          {bars.map((b, i) => (
+            <Rect
+              key={`bar-${b.label}-${i}`}
+              x={b.x} y={b.y}
+              width={b.barW} height={Math.max(b.h, 0)}
+              rx={5} ry={5}
+              fill={b.active ? colors.primary : inactiveBar}
+            />
           ))}
 
-          {/* Tooltip at peak */}
-          {tooltipPt && (
-            <>
-              <Rect
-                x={tooltipPt.x - 26} y={tooltipPt.y - 22}
-                width={52} height={16} rx={4}
-                fill={colors.textPrimary}
-              />
+          {/* Value label above each bar */}
+          {bars.map((b, i) => (
+            b.v > 0 ? (
               <SvgText
-                x={tooltipPt.x} y={tooltipPt.y - 10.5}
-                fontSize={8} fill="white" textAnchor="middle" fontWeight="bold"
+                key={`val-${b.label}-${i}`}
+                x={b.cx} y={Math.max(b.y - 5, PT - 6)}
+                fontSize={7.5}
+                fill={b.active ? colors.primary : colors.textMuted}
+                textAnchor="middle" fontWeight={b.active ? 'bold' : 'normal'}
               >
-                $18,450
+                {axisLabel(b.v)}
               </SvgText>
-            </>
-          )}
+            ) : null
+          ))}
 
-          {/* X-axis labels */}
-          {pts.map((p) => (
+          {/* X-axis month labels */}
+          {bars.map((b, i) => (
             <SvgText
-              key={p.label}
-              x={p.x} y={totalH - 5}
-              fontSize={7.5} fill={colors.textSecondary} textAnchor="middle"
+              key={`lbl-${b.label}-${i}`}
+              x={b.cx} y={totalH - 5}
+              fontSize={7.5} fill={colors.textMuted} textAnchor="middle"
             >
-              {p.label}
+              {b.label}
             </SvgText>
           ))}
         </Svg>
@@ -408,9 +606,10 @@ function SalesTrendChart() {
 const AVATAR_COLORS = ['#8B5CF6', '#0F6FFF', '#F97316'];
 
 function TeamRow({ member, index = 0 }) {
-  const { name, role, score, trend, up } = member;
-  const initials = name.split(' ').map((p) => p[0]).join('');
-  const avatarBg = AVATAR_COLORS[TEAM_MEMBERS.indexOf(member)] || colors.primary;
+  const { name, role, score } = member;
+  const initials = initialsOf(name);
+  const avatarBg = AVATAR_COLORS[index % AVATAR_COLORS.length] || colors.primary;
+  const pct = Math.max(0, Math.min(100, num(score)));
 
   return (
     <View style={styles.teamRow}>
@@ -418,31 +617,37 @@ function TeamRow({ member, index = 0 }) {
         <Text style={[styles.teamAvatarText, { color: avatarBg }]}>{initials}</Text>
       </View>
       <View style={styles.teamInfo}>
-        <Text style={styles.teamName}>{name}</Text>
-        <Text style={styles.teamRole}>{role}</Text>
+        <Text style={styles.teamName} numberOfLines={1}>{name}</Text>
+        <Text style={styles.teamRole} numberOfLines={1}>{role}</Text>
       </View>
       <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${score}%` }]} />
+        <View style={[styles.progressFill, { width: `${pct}%` }]} />
       </View>
-      <Text style={styles.scoreText}>{score}%</Text>
-      <Text style={[styles.teamTrend, !up && styles.teamTrendDown]}>{trend}</Text>
+      <Text style={styles.scoreText}>{Math.round(num(score))}%</Text>
     </View>
   );
 }
 
 /* ─── Bottom Nav ──────────────────────────────────────────────────────── */
 
-function BottomNav() {
+function BottomNav({ navigation, unreadCount = 0 }) {
+  const items = [
+    { icon: 'home', label: 'Home', route: 'Home', active: true },
+    { icon: 'calendar-outline', label: 'Planning', route: 'PlanningCalendar' },
+    { icon: 'checkbox-outline', label: 'Tasks', route: 'MyTasks' },
+    { icon: 'receipt-outline', label: 'Orders', route: 'Orders' },
+    { icon: 'notifications-outline', label: 'Notifications', route: 'Notifications', badge: unreadCount },
+  ];
   return (
     <View style={styles.bottomNav}>
-      {BOTTOM_NAV.map(({ icon, label, active, badge }) => (
-        <View key={label} style={styles.bottomItem}>
+      {items.map(({ icon, label, route, active, badge }) => (
+        <Pressable key={label} style={styles.bottomItem} onPress={() => navigation.navigate(route)}>
           <View>
             <Ionicons name={icon} size={globalWidth('1.15%')} color={active ? colors.primary : colors.textPrimary} />
-            {badge && <Text style={styles.bottomBadge}>{badge}</Text>}
+            {badge > 0 && <Text style={styles.bottomBadge}>{badge > 9 ? '9+' : badge}</Text>}
           </View>
           <Text style={[styles.bottomLabel, active && styles.bottomLabelActive]}>{label}</Text>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
@@ -589,7 +794,7 @@ const styles = StyleSheet.create({
   },
   rowCell: { justifyContent: 'center' },
   rowCellInline: { flexDirection: 'row', alignItems: 'center', gap: globalWidth('0.35%') },
-  colAccount: { flex: 2, flexDirection: 'row', alignItems: 'center', gap: globalWidth('0.55%') },
+  colAccount: { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: globalWidth('0.55%') },
   colTerritory: { flex: 1.4 },
   colTime: { flex: 1 },
   colStatus: { flex: 1 },
@@ -612,6 +817,7 @@ const styles = StyleSheet.create({
   },
   statusBlue: { color: colors.primary, backgroundColor: colors.primaryLight },
   statusGreen: { color: colors.success, backgroundColor: '#E7F8EF' },
+  statusGray: { color: colors.textSecondary, backgroundColor: colors.backgroundColor },
   btnPrimary: {
     borderRadius: 6, backgroundColor: colors.primary,
     paddingHorizontal: globalWidth('0.7%'), paddingVertical: globalHeight('0.65%'),
@@ -688,6 +894,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', paddingTop: globalHeight('0.4%'),
   },
   moreText: { color: colors.textSecondary, fontSize: globalWidth('0.55%') },
+
+  /* ── Empty state ── */
+  emptyText: {
+    color: colors.textMuted, fontSize: globalWidth('0.58%'),
+    textAlign: 'center', paddingVertical: globalHeight('1.5%'), flex: 1,
+  },
+
+  /* ── Your Achievement (rep) ── */
+  achWrap: { alignItems: 'center', paddingVertical: globalHeight('1.5%') },
+  achBig: { color: colors.primary, fontSize: globalWidth('2.4%'), fontWeight: '800' },
+  achCaption: { color: colors.textSecondary, fontSize: globalWidth('0.6%'), marginTop: globalHeight('0.5%') },
+  achRow: {
+    flexDirection: 'row', gap: globalWidth('2%'),
+    marginTop: globalHeight('1.6%'), width: '100%', justifyContent: 'center',
+  },
+  achStat: { alignItems: 'center' },
+  achStatLabel: { color: colors.textSecondary, fontSize: globalWidth('0.52%') },
+  achStatValue: { color: colors.textPrimary, fontSize: globalWidth('0.85%'), fontWeight: '800', marginTop: globalHeight('0.3%') },
 
   /* ── Bottom Nav ── */
   bottomNav: {

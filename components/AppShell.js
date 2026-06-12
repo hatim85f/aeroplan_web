@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import { getProfilePicture } from '../constants/profile';
