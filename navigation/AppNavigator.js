@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
 
-import AuthNavigator from './AuthNavigator';
-import MainNavigator from './MainNavigator';
-import { linking } from './linking';
-import { colors } from '../constants/colors';
-import { defaultAppMetadata } from '../constants/metadataDefaults';
+import AuthNavigator from "./AuthNavigator";
+import MainNavigator from "./MainNavigator";
+import { linking } from "./linking";
+import { colors } from "../constants/colors";
+import { defaultAppMetadata } from "../constants/metadataDefaults";
 import {
   clearUserDetails,
   getCurrentUser,
   getSavedUserDetails,
   saveUserDetails,
-} from '../store/auth/authActions';
-import { loadAppMetadata } from '../store/appMainDetails/appMainDetailsActions';
+} from "../store/auth/authActions";
+import { loadAppMetadata } from "../store/appMainDetails/appMainDetailsActions";
 
 export default function AppNavigator() {
   const [isReady, setIsReady] = useState(false);
@@ -32,7 +32,7 @@ export default function AppNavigator() {
           savedUserDetails.token ||
           savedUserDetails.data?.token ||
           savedUserDetails.accessToken ||
-          '';
+          "";
 
         if (token) {
           try {
@@ -76,11 +76,17 @@ export default function AppNavigator() {
     );
   }
 
+  //
+
   return (
     <View style={styles.root}>
       <NavigationContainer
         linking={linking}
-        fallback={<View style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /></View>}
+        fallback={
+          <View style={styles.loading}>
+            <ActivityIndicator color={colors.primary} size="large" />
+          </View>
+        }
       >
         {userDetails ? (
           <MainNavigator
@@ -89,7 +95,10 @@ export default function AppNavigator() {
             onSignOut={handleSignOut}
           />
         ) : (
-          <AuthNavigator appMetadata={appMetadata} onAuthenticated={handleAuthenticated} />
+          <AuthNavigator
+            appMetadata={appMetadata}
+            onAuthenticated={handleAuthenticated}
+          />
         )}
       </NavigationContainer>
     </View>
@@ -100,8 +109,8 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   loading: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.backgroundColor,
   },
 });
