@@ -355,11 +355,11 @@ export default function StockAccountDetailsScreen({ navigation, route, userDetai
                 </View>
                 <View style={styles.tblHead}>
                   <Text style={[styles.tblTh, { flex: 1.8 }]}>PRODUCT</Text>
-                  <Text style={[styles.tblThNum, { flex: 0.9 }]}>CURRENT</Text>
-                  <Text style={[styles.tblThNum, { flex: 1 }]}>ADDED FROM SALES</Text>
-                  <Text style={[styles.tblThNum, { flex: 0.9 }]}>ADJUSTMENT</Text>
-                  <Text style={[styles.tblThNum, { flex: 0.9 }]}>EXPECTED</Text>
-                  <Text style={[styles.tblThNum, { flex: 0.9 }]}>MOVEMENT</Text>
+                  <View style={[styles.tblNumWrap, { flex: 0.9 }]}><Text style={styles.tblThNum}>CURRENT</Text></View>
+                  <View style={[styles.tblNumWrap, { flex: 1 }]}><Text style={styles.tblThNum}>ADDED FROM SALES</Text></View>
+                  <View style={[styles.tblNumWrap, { flex: 0.9 }]}><Text style={styles.tblThNum}>ADJUSTMENT</Text></View>
+                  <View style={[styles.tblNumWrap, { flex: 0.9 }]}><Text style={styles.tblThNum}>EXPECTED</Text></View>
+                  <View style={[styles.tblNumWrap, { flex: 0.9 }]}><Text style={styles.tblThNum}>MOVEMENT</Text></View>
                   <Text style={[styles.tblTh, { flex: 1.2 }]}>LAST UPDATED</Text>
                   <Text style={[styles.tblTh, { flex: 1.4 }]}>NOTES</Text>
                 </View>
@@ -368,14 +368,22 @@ export default function StockAccountDetailsScreen({ navigation, route, userDetai
                 ) : latest.map((item, index) => (
                   <View key={String(item.productId)} style={[styles.tblRow, index % 2 === 1 && styles.tblRowAlt]}>
                     <Text style={[styles.tblTdStrong, { flex: 1.8 }]} numberOfLines={1}>{item.productNickname || item.productName}</Text>
-                    <Text style={[styles.tblTdNum, { flex: 0.9, fontWeight: '800' }]}>{fmtN(item.currentStock)}</Text>
-                    <Text style={[styles.tblTdNum, { flex: 1, color: '#15803D' }]}>{fmtSigned(item.addedFromSales)}</Text>
-                    <View style={[{ flex: 0.9, alignItems: 'flex-end' }]}>
+                    <View style={[styles.tblNumWrap, { flex: 0.9 }]}>
+                      <Text style={[styles.tblTdNum, { fontWeight: '800' }]}>{fmtN(item.currentStock)}</Text>
+                    </View>
+                    <View style={[styles.tblNumWrap, { flex: 1 }]}>
+                      <Text style={[styles.tblTdNum, { color: '#15803D' }]}>{fmtSigned(item.addedFromSales)}</Text>
+                    </View>
+                    <View style={[styles.tblNumWrap, { flex: 0.9 }]}>
                       <Text style={[styles.tblTdNum, item.adjustmentQuantity ? { color: '#B45309' } : null]}>{item.adjustmentQuantity ? fmtSigned(item.adjustmentQuantity) : '—'}</Text>
                       {item.adjustmentNote ? <Text style={styles.adjNote} numberOfLines={1}>{item.adjustmentNote}</Text> : null}
                     </View>
-                    <Text style={[styles.tblTdNum, { flex: 0.9 }]}>{fmtN(item.expectedStock)}</Text>
-                    <Text style={[styles.tblTdNum, { flex: 0.9, fontWeight: '800', color: movementColor(item.movementQty) }]}>{fmtSigned(item.movementQty)}</Text>
+                    <View style={[styles.tblNumWrap, { flex: 0.9 }]}>
+                      <Text style={styles.tblTdNum}>{fmtN(item.expectedStock)}</Text>
+                    </View>
+                    <View style={[styles.tblNumWrap, { flex: 0.9 }]}>
+                      <Text style={[styles.tblTdNum, { fontWeight: '800', color: movementColor(item.movementQty) }]}>{fmtSigned(item.movementQty)}</Text>
+                    </View>
                     <View style={{ flex: 1.2 }}>
                       <Text style={styles.tblTd}>{fmtDateTime(item.lastUpdatedAt)}</Text>
                       <Text style={styles.subText} numberOfLines={1}>{item.lastUpdatedBy}</Text>
@@ -663,6 +671,7 @@ const styles = StyleSheet.create({
   },
   tblTh: { fontSize: 10, fontWeight: '800', color: colors.primary },
   tblThNum: { fontSize: 10, fontWeight: '800', color: colors.primary, textAlign: 'right' },
+  tblNumWrap: { alignItems: 'flex-end', justifyContent: 'center' },
   tblRow: {
     flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 12, gap: 14,
     borderBottomWidth: 1, borderBottomColor: colors.border, alignItems: 'center',
