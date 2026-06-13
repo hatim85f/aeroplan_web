@@ -76,8 +76,6 @@ export default function AppNavigator() {
     );
   }
 
-  //
-
   return (
     <View style={styles.root}>
       <NavigationContainer
