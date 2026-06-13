@@ -8,6 +8,8 @@ export default function AuthNavigator({ appMetadata, onAuthenticated }) {
   const CreateAccountScreen = require('../screens/auth/CreateAccountScreen').default;
   const VerifyAccountScreen = require('../screens/auth/VerifyAccountScreen').default;
   const ForgotPasswordScreen = require('../screens/auth/ForgotPasswordScreen').default;
+  const PrivacyPolicyScreen = require('../screens/settings/PrivacyPolicyScreen').default;
+  const TermsScreen = require('../screens/settings/TermsScreen').default;
 
   return (
     <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
@@ -37,6 +39,12 @@ export default function AuthNavigator({ appMetadata, onAuthenticated }) {
       </Stack.Screen>
       <Stack.Screen name="ForgotPassword">
         {(props) => <ForgotPasswordScreen {...props} appMetadata={appMetadata} />}
+      </Stack.Screen>
+      <Stack.Screen name="PrivacyPolicy">
+        {(props) => <PrivacyPolicyScreen {...props} appMetadata={appMetadata} />}
+      </Stack.Screen>
+      <Stack.Screen name="Terms">
+        {(props) => <TermsScreen {...props} appMetadata={appMetadata} />}
       </Stack.Screen>
     </Stack.Navigator>
   );

@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
+import { linking } from './linking';
 import { colors } from '../constants/colors';
 import { defaultAppMetadata } from '../constants/metadataDefaults';
 import {
@@ -77,7 +78,10 @@ export default function AppNavigator() {
 
   return (
     <View style={styles.root}>
-      <NavigationContainer>
+      <NavigationContainer
+        linking={linking}
+        fallback={<View style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /></View>}
+      >
         {userDetails ? (
           <MainNavigator
             userDetails={userDetails}
