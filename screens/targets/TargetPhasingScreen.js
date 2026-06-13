@@ -210,7 +210,7 @@ export default function TargetPhasingScreen({ navigation, userDetails, appMetada
   );
 }
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 
 const styles = StyleSheet.create({
   pageHeader: {

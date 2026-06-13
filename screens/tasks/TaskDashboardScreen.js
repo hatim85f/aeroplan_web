@@ -24,7 +24,7 @@ import {
   fmtDate, fmtDateTime, fmtTime, initials, occStatusStyle, priorityStyle, statusStyle, typeStyle,
 } from './taskUtils';
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD = globalWidth('1.2%');
 
 function Avatar({ name, image, size = 30 }) {
@@ -36,13 +36,13 @@ function Avatar({ name, image, size = 30 }) {
   );
 }
 
-function SummaryCard({ icon, iconBg, iconColor, label, value }) {
+function SummaryCard({ icon, label, value, accent }) {
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}><Ionicons name={icon} size={16} color={iconColor} /></View>
+    <View style={[styles.statCard, { backgroundColor: accent.bg, borderColor: accent.border }]}>
+      <View style={[styles.statIcon, { backgroundColor: accent.chip }]}><Ionicons name={icon} size={16} color="#fff" /></View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value ?? '—'}</Text>
+        <Text style={[styles.statLabel, { color: accent.label }]}>{label}</Text>
+        <Text style={[styles.statValue, { color: accent.value }]}>{value ?? '—'}</Text>
       </View>
     </View>
   );
@@ -262,12 +262,12 @@ export default function TaskDashboardScreen({ navigation, route, userDetails, ap
 
         {/* Summary cards */}
         <View style={styles.statsRow}>
-          <SummaryCard icon="people-outline" iconBg="#EFF6FF" iconColor="#1D4ED8" label="Assigned Users" value={sum.assignedUsersCount} />
-          <SummaryCard icon="checkmark-circle-outline" iconBg="#F0FDF4" iconColor="#15803D" label="Completed Users" value={sum.completedUsersCount} />
-          <SummaryCard icon="speedometer-outline" iconBg="#F5F3FF" iconColor="#7C3AED" label="Overall Progress" value={`${sum.overallProgressPercentage}%`} />
-          <SummaryCard icon="chatbubbles-outline" iconBg="#ECFEFF" iconColor="#0E7490" label="Comments" value={sum.totalComments} />
-          <SummaryCard icon="calendar-outline" iconBg="#EFF6FF" iconColor="#1D4ED8" label="Days" value={sum.numberOfDays ?? '—'} />
-          <SummaryCard icon={sum.overdueDays ? 'alert-circle-outline' : 'time-outline'} iconBg={sum.overdueDays ? '#FEF2F2' : '#FFFBEB'} iconColor={sum.overdueDays ? '#DC2626' : '#B45309'} label={sum.overdueDays ? 'Overdue Days' : 'Days Remaining'} value={sum.overdueDays || sum.daysRemaining || 0} />
+          <SummaryCard icon="people-outline" accent={colors.accents.blue} label="Assigned Users" value={sum.assignedUsersCount} />
+          <SummaryCard icon="checkmark-circle-outline" accent={colors.accents.teal} label="Completed Users" value={sum.completedUsersCount} />
+          <SummaryCard icon="speedometer-outline" accent={colors.accents.rose} label="Overall Progress" value={`${sum.overallProgressPercentage}%`} />
+          <SummaryCard icon="chatbubbles-outline" accent={colors.accents.amber} label="Comments" value={sum.totalComments} />
+          <SummaryCard icon="calendar-outline" accent={colors.accents.blue} label="Days" value={sum.numberOfDays ?? '—'} />
+          <SummaryCard icon={sum.overdueDays ? 'alert-circle-outline' : 'time-outline'} accent={sum.overdueDays ? colors.accents.rose : colors.accents.amber} label={sum.overdueDays ? 'Overdue Days' : 'Days Remaining'} value={sum.overdueDays || sum.daysRemaining || 0} />
         </View>
 
         <View style={styles.progressCard}>
@@ -500,12 +500,12 @@ const styles = StyleSheet.create({
   description: { fontSize: 13, color: colors.textSecondary, lineHeight: 19 },
 
   statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  statCard: { flex: 1, minWidth: 140, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 13, ...shadow },
+  statCard: { flex: 1, minWidth: 140, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 13, ...shadow },
   statIcon: { width: 34, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   statLabel: { fontSize: 10.5, color: colors.textSecondary, fontWeight: '600', marginBottom: 2 },
   statValue: { fontSize: 18, fontWeight: '800', color: colors.textPrimary },
 
-  progressCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 16, gap: 8, ...shadow },
+  progressCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 16, gap: 8, ...shadow },
   progressHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   progressPct: { fontSize: 17, fontWeight: '800', color: colors.primary },
   progressTrack: { height: 9, backgroundColor: colors.border + '90', borderRadius: 5, overflow: 'hidden' },
@@ -513,9 +513,9 @@ const styles = StyleSheet.create({
 
   twoCol: { flexDirection: 'row', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' },
   leftCol: { flex: 1.4, minWidth: 320, gap: 14 },
-  chatCol: { flex: 1, minWidth: 320, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, overflow: 'hidden', ...shadow },
+  chatCol: { flex: 1, minWidth: 320, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden', ...shadow },
 
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 16, gap: 12, ...shadow },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 16, gap: 12, ...shadow },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },
 

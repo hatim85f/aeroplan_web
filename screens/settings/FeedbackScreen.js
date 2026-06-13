@@ -8,7 +8,7 @@ import { globalWidth } from '../../constants/globalWidth';
 import { APP_VERSION, BUILD_NUMBER } from '../../constants/legal';
 import { submitFeedback } from '../../store/feedback/feedbackActions';
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD = globalWidth('1.2%');
 
 const COPY = {
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, padding: 20, gap: 14, ...shadow,
+    borderRadius: 14, padding: 20, gap: 14, ...shadow,
   },
   cardTitle: { fontSize: 17, fontWeight: '800', color: colors.textPrimary },
   cardSubtitle: { fontSize: 13, color: colors.textSecondary, marginBottom: 4 },

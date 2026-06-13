@@ -1022,17 +1022,17 @@ export default function TeamDetailScreen({
           <View style={styles.panelCard}>
             <Text style={styles.panelCardTitle}>Team Summary</Text>
             <View style={styles.summaryRow}>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryValue}>{memberCount}</Text>
-                <Text style={styles.summaryLabel}>Members</Text>
+              <View style={[styles.summaryItem, { backgroundColor: colors.accents.blue.bg, borderWidth: 1, borderColor: colors.accents.blue.border }]}>
+                <Text style={[styles.summaryValue, { color: colors.accents.blue.value }]}>{memberCount}</Text>
+                <Text style={[styles.summaryLabel, { color: colors.accents.blue.label }]}>Members</Text>
               </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryValue}>{targets.length || "—"}</Text>
-                <Text style={styles.summaryLabel}>Targets</Text>
+              <View style={[styles.summaryItem, { backgroundColor: colors.accents.teal.bg, borderWidth: 1, borderColor: colors.accents.teal.border }]}>
+                <Text style={[styles.summaryValue, { color: colors.accents.teal.value }]}>{targets.length || "—"}</Text>
+                <Text style={[styles.summaryLabel, { color: colors.accents.teal.label }]}>Targets</Text>
               </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryValue}>{reports.length || "—"}</Text>
-                <Text style={styles.summaryLabel}>Reports</Text>
+              <View style={[styles.summaryItem, { backgroundColor: colors.accents.rose.bg, borderWidth: 1, borderColor: colors.accents.rose.border }]}>
+                <Text style={[styles.summaryValue, { color: colors.accents.rose.value }]}>{reports.length || "—"}</Text>
+                <Text style={[styles.summaryLabel, { color: colors.accents.rose.label }]}>Reports</Text>
               </View>
             </View>
           </View>
@@ -1094,12 +1094,7 @@ export default function TeamDetailScreen({
 }
 
 /* ─── Styles ────────────────────────────────────────────────────────────── */
-const shadow = {
-  shadowColor: "#0B2B66",
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  shadowOffset: { width: 0, height: 2 },
-};
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 
 const styles = StyleSheet.create({
   centered: { alignItems: "center", padding: 32, gap: 12 },

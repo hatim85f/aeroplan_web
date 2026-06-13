@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  Image, Pressable, ScrollView,
+  Pressable, ScrollView,
   StyleSheet, Text, View,
 } from 'react-native';
 import Svg, {
@@ -20,8 +20,6 @@ import { getMyForecast, getTeamForecasts } from '../../store/forecasts/forecastA
 import { getMyAchievement, getTeamAchievement } from '../../store/achievements/achievementActions';
 import { getManagerDashboard, getMyCalendar } from '../../store/planning/planningActions';
 import { getNotifications } from '../../store/notifications/notificationActions';
-
-const landingImage = require('../../assets/images/landing_image.png');
 
 const QUICK_ACTIONS = [
   { icon: 'cart', label: 'Add Order', color: '#F97316', bg: '#FFF4EE', action: 'addOrder' },
@@ -253,25 +251,23 @@ export default function HomeScreen({ navigation, userDetails, appMetadata, onSig
           {/* ── Hero Row ─────────────────────────────────────────────── */}
           <View style={styles.heroRow}>
             <View style={styles.aiCard}>
+              <View style={styles.heroOrb} />
+              <View style={styles.heroOrb2} />
               <View style={styles.aiContent}>
-                <Text style={styles.aiTitle}>AI Sales Plan</Text>
-                <Text style={styles.aiBold}>{accountsToVisit} activit{accountsToVisit === 1 ? 'y' : 'ies'} planned for today</Text>
-                <Text style={styles.aiBody}>Start with your highest-priority accounts to maximize your coverage.</Text>
+                <Text style={styles.aiTitle}>AI sales plan</Text>
+                <Text style={styles.aiBody}>
+                  {accountsToVisit} {accountsToVisit === 1 ? 'account' : 'accounts'} to visit today. Start with your priority accounts.
+                </Text>
                 <Pressable style={styles.aiBtn} onPress={goPlanning}>
-                  <Text style={styles.aiBtnText}>View Plan</Text>
+                  <Text style={styles.aiBtnText}>View plan</Text>
                 </Pressable>
               </View>
-              <Image
-                source={landingImage}
-                style={styles.aiImage}
-                resizeMode="contain"
-              />
             </View>
 
-            <MetricCard icon="cash-outline"     title="MTD Sales"        value={loading ? '—' : fmtMoney(salesValue)}    sub="This Month" />
-            <MetricCard icon="bar-chart-outline" title="Forecast"         value={loading ? '—' : fmtMoney(forecastValue)} sub="This Month" />
-            <MetricCard icon="disc-outline"      title="MTD Achievement"  value={loading ? '—' : `${achPct}%`}            sub={achTargetSub} />
-            <MetricCard icon="calendar-outline"  title="Accounts to Visit" value={loading ? '—' : String(accountsToVisit)} sub="Planned Today" link="View Accounts" onLinkPress={goPlanning} />
+            <MetricCard accent={colors.accents.blue} icon="cash-outline"     title="MTD Sales"        value={loading ? '—' : fmtMoney(salesValue)}    sub="This Month" />
+            <MetricCard accent={colors.accents.teal} icon="bar-chart-outline" title="Forecast"         value={loading ? '—' : fmtMoney(forecastValue)} sub="This Month" />
+            <MetricCard accent={colors.accents.rose} icon="disc-outline"      title="MTD Achievement"  value={loading ? '—' : `${achPct}%`}            sub={achTargetSub} />
+            <MetricCard accent={colors.accents.amber} icon="calendar-outline"  title="Accounts to Visit" value={loading ? '—' : String(accountsToVisit)} sub="Planned Today" link="View Accounts" onLinkPress={goPlanning} />
           </View>
 
           {/* ── Body ─────────────────────────────────────────────────── */}
@@ -394,17 +390,18 @@ export default function HomeScreen({ navigation, userDetails, appMetadata, onSig
 
 /* ─── MetricCard ──────────────────────────────────────────────────────── */
 
-function MetricCard({ icon, title, value, sub, trend, link, onLinkPress }) {
+function MetricCard({ accent, icon, title, value, sub, trend, link, onLinkPress }) {
+  const a = accent || colors.accents.blue;
   return (
-    <View style={styles.metricCard}>
-      <View style={styles.metricIconBox}>
-        <Ionicons name={icon} size={globalWidth('1.05%')} color={colors.white} />
+    <View style={[styles.metricCard, { backgroundColor: a.bg, borderColor: a.border }]}>
+      <View style={[styles.metricIconBox, { backgroundColor: a.chip }]}>
+        <Ionicons name={icon} size={globalWidth('1.05%')} color="#fff" />
       </View>
-      <Text style={styles.metricTitle}>{title}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricSub}>{sub}</Text>
+      <Text style={[styles.metricTitle, { color: a.label }]}>{title}</Text>
+      <Text style={[styles.metricValue, { color: a.value }]}>{value}</Text>
+      <Text style={[styles.metricSub, { color: a.label }]}>{sub}</Text>
       {trend && <Text style={styles.metricTrend}>{trend}</Text>}
-      {link && <Text style={styles.metricLink} onPress={onLinkPress}>{link}</Text>}
+      {link && <Text style={[styles.metricLink, { color: a.chip }]} onPress={onLinkPress}>{link}</Text>}
     </View>
   );
 }
@@ -693,11 +690,24 @@ const styles = StyleSheet.create({
   aiCard: {
     flex: 2.5,
     height: globalHeight('19%'),
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#2D5BE3',
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
+    ...colors.elev.hero,
+  },
+  heroOrb: {
+    position: 'absolute', top: -globalHeight('5%'), right: -globalWidth('2%'),
+    width: globalWidth('9%'), height: globalWidth('9%'),
+    borderRadius: globalWidth('4.5%'),
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  heroOrb2: {
+    position: 'absolute', bottom: -globalHeight('6%'), right: globalWidth('5%'),
+    width: globalWidth('6%'), height: globalWidth('6%'),
+    borderRadius: globalWidth('3%'),
+    backgroundColor: 'rgba(255,255,255,0.09)',
   },
   aiContent: {
     flex: 1,
@@ -720,20 +730,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: globalWidth('1%'),
     paddingVertical: globalHeight('0.75%'),
   },
-  aiBtnText: { color: '#2D5BE3', fontSize: globalWidth('0.6%'), fontWeight: '800' },
+  aiBtnText: { color: colors.primary, fontSize: globalWidth('0.6%'), fontWeight: '800' },
 
   /* ── Metric Card ── */
   metricCard: {
-    ...shadow,
+    ...colors.elev.card,
     flex: 1,
     height: globalHeight('19%'),
     borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, backgroundColor: colors.surface,
+    borderRadius: 14, backgroundColor: colors.surface,
     padding: globalWidth('0.9%'),
   },
   metricIconBox: {
     width: globalWidth('2.1%'), height: globalWidth('2.1%'),
-    borderRadius: globalWidth('1.05%'),
+    borderRadius: globalWidth('0.6%'),
     backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
     marginBottom: globalHeight('1%'),
@@ -755,9 +765,9 @@ const styles = StyleSheet.create({
 
   /* ── Panel ── */
   panel: {
-    ...shadow,
+    ...colors.elev.card,
     borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, backgroundColor: colors.surface,
+    borderRadius: 14, backgroundColor: colors.surface,
     padding: globalWidth('0.85%'),
   },
   panelHeader: {

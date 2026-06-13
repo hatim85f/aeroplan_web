@@ -43,16 +43,17 @@ function getStatusCfg(s) {
 }
 
 /* ─── Stat card ──────────────────────────────────────────────────────────── */
-function StatCard({ icon, iconBg, iconColor, label, value, sub }) {
+function StatCard({ icon, accent, label, value, sub }) {
+  const a = accent || colors.accents.blue;
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={19} color={iconColor} />
+    <View style={[styles.statCard, { backgroundColor: a.bg, borderColor: a.border }]}>
+      <View style={[styles.statIcon, { backgroundColor: a.chip }]}>
+        <Ionicons name={icon} size={19} color={colors.white} />
       </View>
       <View style={styles.statBody}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value ?? '—'}</Text>
-        {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
+        <Text style={[styles.statLabel, { color: a.label }]}>{label}</Text>
+        <Text style={[styles.statValue, { color: a.value }]}>{value ?? '—'}</Text>
+        {sub ? <Text style={[styles.statSub, { color: a.label }]}>{sub}</Text> : null}
       </View>
     </View>
   );
@@ -379,14 +380,14 @@ export default function OrdersScreen({ navigation, userDetails, appMetadata, onS
 
       {/* Stats row */}
       <View style={styles.statsRow}>
-        <StatCard icon="receipt-outline"         iconBg="#E8F0FF" iconColor="#0F6FFF" label="Total Orders"     value={fmtN(statsTotal)} />
-        <StatCard icon="create-outline"          iconBg="#EFF6FF" iconColor="#1D4ED8" label="Created"          value={fmtN(statsCreated)}
+        <StatCard icon="receipt-outline"         accent={colors.accents.blue}  label="Total Orders"     value={fmtN(statsTotal)} />
+        <StatCard icon="create-outline"          accent={colors.accents.teal}  label="Created"          value={fmtN(statsCreated)}
           sub={statsTotal ? `${Math.round((statsCreated / statsTotal) * 100)}% of total` : ''} />
-        <StatCard icon="checkmark-circle-outline" iconBg="#ECFDF5" iconColor="#059669" label="Matched in Sales" value={fmtN(statsMatched)}
+        <StatCard icon="checkmark-circle-outline" accent={colors.accents.rose} label="Matched in Sales" value={fmtN(statsMatched)}
           sub={statsTotal ? `${Math.round((statsMatched / statsTotal) * 100)}% of total` : ''} />
-        <StatCard icon="cash-outline"            iconBg="#FFF3E0" iconColor="#F97316" label="Total Value (USD)" value={fmtUSD(statsCifUSD)}
+        <StatCard icon="cash-outline"            accent={colors.accents.amber} label="Total Value (USD)" value={fmtUSD(statsCifUSD)}
           sub={summary ? 'All orders' : 'This page'} />
-        <StatCard icon="wallet-outline"          iconBg="#F0FFF4" iconColor="#059669" label="Total Value (AED)" value={fmtAED(statsWhlAED)}
+        <StatCard icon="wallet-outline"          accent={colors.accents.blue}  label="Total Value (AED)" value={fmtAED(statsWhlAED)}
           sub={summary ? 'All orders' : 'This page'} />
       </View>
 
@@ -607,7 +608,7 @@ export default function OrdersScreen({ navigation, userDetails, appMetadata, onS
 }
 
 /* ─── Styles ─────────────────────────────────────────────────────────────── */
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 
 const styles = StyleSheet.create({
   pageHeader: {
@@ -638,7 +639,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1, minWidth: globalWidth('13%'),
-    backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1,
+    backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1,
     borderColor: colors.border, padding: globalWidth('0.9%'),
     flexDirection: 'row', alignItems: 'center', gap: globalWidth('0.7%'), ...shadow,
   },
@@ -649,7 +650,7 @@ const styles = StyleSheet.create({
   statSub:   { fontSize: globalWidth('0.54%'), color: colors.textSecondary, marginTop: 1 },
 
   tableCard: {
-    backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1,
+    backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1,
     borderColor: colors.border, marginBottom: globalHeight('2%'), ...shadow,
   },
 

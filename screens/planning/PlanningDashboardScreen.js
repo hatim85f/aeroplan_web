@@ -10,16 +10,16 @@ import { globalWidth } from '../../constants/globalWidth';
 import { getManagerDashboard, getTeamWeek } from '../../store/planning/planningActions';
 import { addDays, isManagerRole, isoDate, weekStartOf } from './planningUtils';
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD = globalWidth('1.2%');
 
-function StatCard({ icon, iconColor, iconBg, label, value }) {
+function StatCard({ icon, label, value, accent }) {
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}><Ionicons name={icon} size={18} color={iconColor} /></View>
+    <View style={[styles.statCard, { backgroundColor: accent.bg, borderColor: accent.border }]}>
+      <View style={[styles.statIcon, { backgroundColor: accent.chip }]}><Ionicons name={icon} size={18} color="#fff" /></View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value ?? '—'}</Text>
+        <Text style={[styles.statLabel, { color: accent.label }]}>{label}</Text>
+        <Text style={[styles.statValue, { color: accent.value }]}>{value ?? '—'}</Text>
       </View>
     </View>
   );
@@ -102,10 +102,10 @@ export default function PlanningDashboardScreen({ navigation, userDetails, appMe
         </View>
 
         <View style={styles.statsRow}>
-          <StatCard icon="people-outline" iconColor="#1D4ED8" iconBg="#EFF6FF" label="Total Reps" value={cards.totalReps} />
-          <StatCard icon="checkmark-circle-outline" iconColor="#15803D" iconBg="#F0FDF4" label="Reps With Visits" value={cards.repsWithVisits} />
-          <StatCard icon="alert-circle-outline" iconColor="#B45309" iconBg="#FFFBEB" label="Reps Without Visits" value={cards.repsWithoutVisits} />
-          <StatCard icon="navigate-outline" iconColor="#7C3AED" iconBg="#F5F3FF" label="Total Visits Today" value={cards.totalVisits} />
+          <StatCard icon="people-outline" accent={colors.accents.blue} label="Total Reps" value={cards.totalReps} />
+          <StatCard icon="checkmark-circle-outline" accent={colors.accents.teal} label="Reps With Visits" value={cards.repsWithVisits} />
+          <StatCard icon="alert-circle-outline" accent={colors.accents.rose} label="Reps Without Visits" value={cards.repsWithoutVisits} />
+          <StatCard icon="navigate-outline" accent={colors.accents.amber} label="Total Visits Today" value={cards.totalVisits} />
         </View>
 
         {loading ? (
@@ -202,13 +202,13 @@ const styles = StyleSheet.create({
   dateLabel: { fontSize: 13, fontWeight: '700', color: colors.textPrimary, minWidth: 100, textAlign: 'center' },
 
   statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  statCard: { flex: 1, minWidth: 150, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, ...shadow },
+  statCard: { flex: 1, minWidth: 150, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, ...shadow },
   statIcon: { width: 36, height: 36, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   statLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '600', marginBottom: 2 },
   statValue: { fontSize: 20, fontWeight: '800', color: colors.textPrimary },
 
   repGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  repCard: { flex: 1, minWidth: 260, maxWidth: 380, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, gap: 10, ...shadow },
+  repCard: { flex: 1, minWidth: 260, maxWidth: 380, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, gap: 10, ...shadow },
   repHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   repName: { fontSize: 14, fontWeight: '800', color: colors.textPrimary, flex: 1 },
   countPill: { minWidth: 24, alignItems: 'center', backgroundColor: colors.border + '70', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },

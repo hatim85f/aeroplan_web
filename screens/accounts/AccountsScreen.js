@@ -39,16 +39,17 @@ function StatusPill({ active }) {
   );
 }
 
-function StatCard({ icon, iconColor, iconBg, label, value, sub }) {
+function StatCard({ icon, accent, label, value, sub }) {
+  const a = accent || colors.accents.blue;
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={20} color={iconColor} />
+    <View style={[styles.statCard, { backgroundColor: a.bg, borderColor: a.border }]}>
+      <View style={[styles.statIcon, { backgroundColor: a.chip }]}>
+        <Ionicons name={icon} size={20} color={colors.white} />
       </View>
       <View style={styles.statBody}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value}</Text>
-        {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
+        <Text style={[styles.statLabel, { color: a.label }]}>{label}</Text>
+        <Text style={[styles.statValue, { color: a.value }]}>{value}</Text>
+        {sub ? <Text style={[styles.statSub, { color: a.label }]}>{sub}</Text> : null}
       </View>
     </View>
   );
@@ -168,25 +169,25 @@ export default function AccountsScreen({ navigation, userDetails, appMetadata, o
       {/* Stats row */}
       <View style={styles.statsRow}>
         <StatCard
-          icon="business-outline" iconColor="#0F6FFF" iconBg="#E8F0FF"
+          icon="business-outline" accent={colors.accents.blue}
           label="Total Accounts" value={pagination.total || accounts.length}
         />
         {managerRole ? (
           <StatCard
-            icon="checkmark-circle-outline" iconColor="#18C287" iconBg="#E7F8EF"
+            icon="checkmark-circle-outline" accent={colors.accents.teal}
             label="Active Accounts"
             value={accounts.filter((a) => a.isActive !== false).length}
             sub={pagination.total ? `${Math.round(accounts.filter((a) => a.isActive !== false).length / Math.max(accounts.length, 1) * 100)}% of total` : ''}
           />
         ) : (
           <StatCard
-            icon="person-circle-outline" iconColor="#18C287" iconBg="#E7F8EF"
+            icon="person-circle-outline" accent={colors.accents.teal}
             label="My Assigned" value={myAssignedTotal}
             sub="Accounts assigned to me"
           />
         )}
         <StatCard
-          icon="people-outline" iconColor="#F97316" iconBg="#FFF3E0"
+          icon="people-outline" accent={colors.accents.rose}
           label={managerRole ? 'Assigned Reps' : 'Selected'}
           value={managerRole
             ? [...new Set(
@@ -198,7 +199,7 @@ export default function AccountsScreen({ navigation, userDetails, appMetadata, o
           sub={managerRole ? 'Across all accounts' : selectedIds.length > 0 ? 'Ready to assign' : 'Tap + to select accounts'}
         />
         <StatCard
-          icon="calendar-outline" iconColor="#8B5CF6" iconBg="#F5F0FF"
+          icon="calendar-outline" accent={colors.accents.amber}
           label="Total Pages" value={totalPages} sub={`Page ${page} of ${totalPages}`}
         />
       </View>
@@ -430,7 +431,7 @@ export default function AccountsScreen({ navigation, userDetails, appMetadata, o
 }
 
 /* ─── Styles ─────────────────────────────────────────────────────────────── */
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 
 const styles = StyleSheet.create({
   pageHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: globalHeight('1.5%'), flexWrap: 'wrap', gap: 10 },

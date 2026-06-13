@@ -8,16 +8,16 @@ import { globalWidth } from '../../constants/globalWidth';
 import { getTaskReport } from '../../store/tasks/taskActions';
 import { fmtDate, priorityStyle, statusStyle, typeStyle } from './taskUtils';
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD = globalWidth('1.2%');
 
-function StatCard({ icon, iconBg, iconColor, label, value }) {
+function StatCard({ icon, label, value, accent }) {
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}><Ionicons name={icon} size={18} color={iconColor} /></View>
+    <View style={[styles.statCard, { backgroundColor: accent.bg, borderColor: accent.border }]}>
+      <View style={[styles.statIcon, { backgroundColor: accent.chip }]}><Ionicons name={icon} size={18} color="#fff" /></View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value ?? '—'}</Text>
+        <Text style={[styles.statLabel, { color: accent.label }]}>{label}</Text>
+        <Text style={[styles.statValue, { color: accent.value }]}>{value ?? '—'}</Text>
       </View>
     </View>
   );
@@ -65,11 +65,11 @@ export default function TaskReportsScreen({ navigation, userDetails, appMetadata
         ) : (
           <>
             <View style={styles.statsRow}>
-              <StatCard icon="layers-outline" iconBg="#EFF6FF" iconColor="#1D4ED8" label="Total Tasks" value={summary.totalTasks} />
-              <StatCard icon="play-circle-outline" iconBg="#ECFEFF" iconColor="#0E7490" label="Active" value={summary.activeTasks} />
-              <StatCard icon="checkmark-done-outline" iconBg="#F0FDF4" iconColor="#15803D" label="Completed" value={summary.completedTasks} />
-              <StatCard icon="alert-circle-outline" iconBg="#FEF2F2" iconColor="#DC2626" label="Overdue" value={summary.overdueTasks} />
-              <StatCard icon="speedometer-outline" iconBg="#F5F3FF" iconColor="#7C3AED" label="Avg Progress" value={summary.averageProgress != null ? `${summary.averageProgress}%` : '—'} />
+              <StatCard icon="layers-outline" accent={colors.accents.blue} label="Total Tasks" value={summary.totalTasks} />
+              <StatCard icon="play-circle-outline" accent={colors.accents.teal} label="Active" value={summary.activeTasks} />
+              <StatCard icon="checkmark-done-outline" accent={colors.accents.rose} label="Completed" value={summary.completedTasks} />
+              <StatCard icon="alert-circle-outline" accent={colors.accents.amber} label="Overdue" value={summary.overdueTasks} />
+              <StatCard icon="speedometer-outline" accent={colors.accents.blue} label="Avg Progress" value={summary.averageProgress != null ? `${summary.averageProgress}%` : '—'} />
             </View>
 
             <View style={styles.tableCard}>
@@ -118,12 +118,12 @@ const styles = StyleSheet.create({
   pageSubtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
 
   statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  statCard: { flex: 1, minWidth: 150, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, ...shadow },
+  statCard: { flex: 1, minWidth: 150, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, ...shadow },
   statIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   statLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '600', marginBottom: 2 },
   statValue: { fontSize: 20, fontWeight: '800', color: colors.textPrimary },
 
-  tableCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 16, gap: 6, ...shadow },
+  tableCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 16, gap: 6, ...shadow },
   cardTitle: { fontSize: 15, fontWeight: '800', color: colors.textPrimary, marginBottom: 8 },
   tableHead: { flexDirection: 'row', paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
   th: { fontSize: 11, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase' },

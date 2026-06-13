@@ -7,7 +7,7 @@ import { colors } from '../../constants/colors';
 import { globalHeight, globalWidth } from '../../constants/globalWidth';
 import { getNotifications, markNotificationOpened } from '../../store/notifications/notificationActions';
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD = globalWidth('1.2%');
 
 // Routes that exist in MainNavigator — guard against bad routeName payloads.
@@ -20,6 +20,26 @@ const VALID_ROUTES = new Set([
   'PlanningDashboard', 'PlanningReports', 'MyTasks', 'TeamTasks', 'TaskDashboard',
   'TaskReports', 'Notifications',
 ]);
+
+// Pick a category icon + tinted background per notification, based on its
+// payload.category (set by the backend) with a route/title fallback. Mirrors
+// the mobile notifications palette so the two clients look consistent.
+const resolveVisual = (item) => {
+  const cat = String(item?.payload?.category || item?.category || '').toLowerCase();
+  const hay = `${cat} ${String(item?.routeName || '')} ${String(item?.title || '')}`.toLowerCase();
+  const A = colors.accents;
+  if (hay.includes('task')) return { bg: A.purple.bg, fg: A.purple.chip, icon: 'checkbox-outline' };
+  if (hay.includes('order')) return { bg: A.amber.bg, fg: A.amber.chip, icon: 'cart-outline' };
+  if (hay.includes('forecast')) return { bg: A.teal.bg, fg: A.teal.chip, icon: 'stats-chart-outline' };
+  if (hay.includes('sale')) return { bg: A.rose.bg, fg: A.rose.chip, icon: 'bar-chart-outline' };
+  if (hay.includes('plan') || hay.includes('calendar') || hay.includes('visit')) {
+    return { bg: A.blue.bg, fg: A.blue.chip, icon: 'calendar-outline' };
+  }
+  if (hay.includes('stock') || hay.includes('low') || hay.includes('alert')) {
+    return { bg: colors.dangerLight, fg: colors.danger, icon: 'cube-outline' };
+  }
+  return { bg: A.gray.bg, fg: A.gray.chip, icon: 'notifications-outline' };
+};
 
 const relTime = (iso) => {
   if (!iso) return '';
@@ -111,18 +131,15 @@ export default function NotificationsScreen({ navigation, userDetails, appMetada
           <View style={styles.listCard}>
             {items.map((n, i) => {
               const unreadRow = !n.isOpened;
+              const visual = resolveVisual(n);
               return (
                 <Pressable
                   key={n._id || i}
                   onPress={() => onPressRow(n)}
                   style={[styles.row, unreadRow && styles.rowUnread, i === items.length - 1 && styles.rowLast]}
                 >
-                  <View style={[styles.iconBox, unreadRow ? styles.iconBoxUnread : styles.iconBoxRead]}>
-                    <Ionicons
-                      name={unreadRow ? 'notifications' : 'notifications-outline'}
-                      size={16}
-                      color={unreadRow ? colors.primary : colors.textSecondary}
-                    />
+                  <View style={[styles.iconBox, { backgroundColor: visual.bg }]}>
+                    <Ionicons name={visual.icon} size={16} color={visual.fg} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rowTitle} numberOfLines={1}>{n.title || 'Notification'}</Text>
@@ -148,7 +165,7 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: 22, fontWeight: '800', color: colors.textPrimary },
   pageSubtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
 
-  listCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, overflow: 'hidden', ...shadow },
+  listCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden', ...shadow },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 14, paddingHorizontal: 16,
@@ -166,7 +183,7 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
 
   emptyCard: {
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14,
     paddingVertical: globalHeight('8%'), alignItems: 'center', justifyContent: 'center', gap: 12, ...shadow,
   },
   emptyText: { fontSize: 14, color: colors.textMuted, fontWeight: '600' },

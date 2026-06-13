@@ -30,16 +30,17 @@ const LINE_PILL_COLORS = [
   { bg: '#FFFBEB', text: '#B45309' },  // yellow
 ];
 
-function StatCard({ icon, iconColor, iconBg, label, value, sub }) {
+function StatCard({ icon, accent, label, value, sub }) {
+  const a = accent || colors.accents.blue;
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={20} color={iconColor} />
+    <View style={[styles.statCard, { backgroundColor: a.bg, borderColor: a.border }]}>
+      <View style={[styles.statIcon, { backgroundColor: a.chip }]}>
+        <Ionicons name={icon} size={20} color={colors.white} />
       </View>
       <View style={styles.statBody}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value ?? '—'}</Text>
-        {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
+        <Text style={[styles.statLabel, { color: a.label }]}>{label}</Text>
+        <Text style={[styles.statValue, { color: a.value }]}>{value ?? '—'}</Text>
+        {sub ? <Text style={[styles.statSub, { color: a.label }]}>{sub}</Text> : null}
       </View>
     </View>
   );
@@ -301,11 +302,11 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
 
       {/* Stats */}
       <View style={styles.statsRow}>
-        <StatCard icon="cube-outline" iconColor="#0F6FFF" iconBg="#E8F0FF" label="Total Products" value={pagination.total || products.length} sub="" />
-        <StatCard icon="checkmark-circle-outline" iconColor="#18C287" iconBg="#E7F8EF" label="Active Products" value={activeCount} sub={products.length ? `${Math.round(activeCount / Math.max(products.length, 1) * 100)}% of total` : ''} />
-        {managerRole && <StatCard icon="close-circle-outline" iconColor="#EF4444" iconBg="#FEF2F2" label="Inactive Products" value={inactiveCount} sub={products.length ? `${Math.round(inactiveCount / Math.max(products.length, 1) * 100)}% of total` : ''} />}
-        <StatCard icon="layers-outline" iconColor="#8B5CF6" iconBg="#F5F0FF" label="Total Lines" value={uniqueLines} sub="Product lines" />
-        <StatCard icon="trending-up-outline" iconColor="#F97316" iconBg="#FFF3E0" label="Avg. FOC" value={avgFoc != null ? `${avgFoc}%` : '—'} sub="Across all products" />
+        <StatCard icon="cube-outline" accent={colors.accents.blue} label="Total Products" value={pagination.total || products.length} sub="" />
+        <StatCard icon="checkmark-circle-outline" accent={colors.accents.teal} label="Active Products" value={activeCount} sub={products.length ? `${Math.round(activeCount / Math.max(products.length, 1) * 100)}% of total` : ''} />
+        {managerRole && <StatCard icon="close-circle-outline" accent={colors.accents.rose} label="Inactive Products" value={inactiveCount} sub={products.length ? `${Math.round(inactiveCount / Math.max(products.length, 1) * 100)}% of total` : ''} />}
+        <StatCard icon="layers-outline" accent={colors.accents.amber} label="Total Lines" value={uniqueLines} sub="Product lines" />
+        <StatCard icon="trending-up-outline" accent={colors.accents.blue} label="Avg. FOC" value={avgFoc != null ? `${avgFoc}%` : '—'} sub="Across all products" />
       </View>
 
       {/* Table card */}
@@ -512,7 +513,7 @@ export default function ProductsScreen({ navigation, userDetails, appMetadata, o
   );
 }
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 
 const styles = StyleSheet.create({
   pageHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: globalHeight('1.5%'), flexWrap: 'wrap', gap: 10 },

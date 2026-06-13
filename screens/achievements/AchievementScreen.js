@@ -15,7 +15,7 @@ const isManager = (role) =>
 const THIS_YEAR = new Date().getFullYear();
 const THIS_MONTH = new Date().getMonth() + 1;
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD = globalWidth('1.2%');
 
 const MONTH_OPTIONS = [
@@ -43,15 +43,15 @@ const achievementState = (pct) => {
   return { bg: '#F1F5F9', text: '#64748B', bar: '#CBD5E1', label: 'No Sales' };
 };
 
-function StatCard({ icon, iconColor, iconBg, label, value, sub }) {
+function StatCard({ icon, label, value, sub, accent = colors.accents.blue }) {
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={18} color={iconColor} />
+    <View style={[styles.statCard, { backgroundColor: accent.bg, borderColor: accent.border }]}>
+      <View style={[styles.statIcon, { backgroundColor: accent.chip }]}>
+        <Ionicons name={icon} size={18} color="#fff" />
       </View>
       <View style={styles.statBody}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value ?? '—'}</Text>
+        <Text style={[styles.statLabel, { color: accent.label }]}>{label}</Text>
+        <Text style={[styles.statValue, { color: accent.value }]}>{value ?? '—'}</Text>
         {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
       </View>
     </View>
@@ -274,19 +274,19 @@ export default function AchievementScreen({ navigation, userDetails, appMetadata
             {/* ── Monthly cards ── */}
             <Text style={styles.sectionLabel}>{monthName} {year}</Text>
             <View style={styles.statsRow}>
-              <StatCard icon="flag-outline" iconColor="#1D4ED8" iconBg="#EFF6FF" label="Monthly Target" value={fmtUSD(cards.monthlyTargetValue)} sub={`${fmtN(cards.monthlyTargetUnits)} units`} />
-              <StatCard icon="cash-outline" iconColor="#15803D" iconBg="#F0FDF4" label="Monthly Sales" value={fmtUSD(cards.monthlySalesValue)} sub={`${fmtN(cards.monthlySalesUnits)} units`} />
-              <StatCard icon="speedometer-outline" iconColor="#7C3AED" iconBg="#F5F3FF" label="Monthly Achievement" value={fmtPct(cards.monthlyAchievementPercentage)} sub={`Units ${fmtPct(cards.monthlyUnitsAchievementPercentage)}`} />
-              <StatCard icon="trending-down-outline" iconColor="#DC2626" iconBg="#FEF2F2" label="Monthly Gap" value={fmtUSD(cards.monthlyGapValue)} sub={`${fmtN(cards.monthlyGapUnits)} units`} />
+              <StatCard icon="flag-outline" accent={colors.accents.blue} label="Monthly Target" value={fmtUSD(cards.monthlyTargetValue)} sub={`${fmtN(cards.monthlyTargetUnits)} units`} />
+              <StatCard icon="cash-outline" accent={colors.accents.teal} label="Monthly Sales" value={fmtUSD(cards.monthlySalesValue)} sub={`${fmtN(cards.monthlySalesUnits)} units`} />
+              <StatCard icon="speedometer-outline" accent={colors.accents.rose} label="Monthly Achievement" value={fmtPct(cards.monthlyAchievementPercentage)} sub={`Units ${fmtPct(cards.monthlyUnitsAchievementPercentage)}`} />
+              <StatCard icon="trending-down-outline" accent={colors.accents.amber} label="Monthly Gap" value={fmtUSD(cards.monthlyGapValue)} sub={`${fmtN(cards.monthlyGapUnits)} units`} />
             </View>
 
             {/* ── YTD cards ── */}
             <Text style={styles.sectionLabel}>YTD ({ytdLabel})</Text>
             <View style={styles.statsRow}>
-              <StatCard icon="flag-outline" iconColor="#1D4ED8" iconBg="#EFF6FF" label="YTD Target" value={fmtUSD(cards.ytdTargetValue)} sub={`${fmtN(cards.ytdTargetUnits)} units`} />
-              <StatCard icon="cash-outline" iconColor="#15803D" iconBg="#F0FDF4" label="YTD Sales" value={fmtUSD(cards.ytdSalesValue)} sub={`${fmtN(cards.ytdSalesUnits)} units`} />
-              <StatCard icon="speedometer-outline" iconColor="#7C3AED" iconBg="#F5F3FF" label="YTD Achievement" value={fmtPct(cards.ytdAchievementPercentage)} sub={`Units ${fmtPct(cards.ytdUnitsAchievementPercentage)}`} />
-              <StatCard icon="trending-down-outline" iconColor="#DC2626" iconBg="#FEF2F2" label="YTD Gap" value={fmtUSD(cards.ytdGapValue)} sub={`${fmtN(cards.ytdGapUnits)} units`} />
+              <StatCard icon="flag-outline" accent={colors.accents.blue} label="YTD Target" value={fmtUSD(cards.ytdTargetValue)} sub={`${fmtN(cards.ytdTargetUnits)} units`} />
+              <StatCard icon="cash-outline" accent={colors.accents.teal} label="YTD Sales" value={fmtUSD(cards.ytdSalesValue)} sub={`${fmtN(cards.ytdSalesUnits)} units`} />
+              <StatCard icon="speedometer-outline" accent={colors.accents.rose} label="YTD Achievement" value={fmtPct(cards.ytdAchievementPercentage)} sub={`Units ${fmtPct(cards.ytdUnitsAchievementPercentage)}`} />
+              <StatCard icon="trending-down-outline" accent={colors.accents.amber} label="YTD Gap" value={fmtUSD(cards.ytdGapValue)} sub={`${fmtN(cards.ytdGapUnits)} units`} />
             </View>
 
             {/* ── Total progress ── */}
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1, minWidth: 150, flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, padding: 14, ...shadow,
+    borderRadius: 14, padding: 14, ...shadow,
   },
   statIcon: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   statBody: { flex: 1 },
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, padding: 16, gap: 12, ...shadow,
+    borderRadius: 14, padding: 16, gap: 12, ...shadow,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },

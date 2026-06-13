@@ -34,7 +34,7 @@ const MONTH_OPTS = [
 
 const PIE_COLORS = ['#1D4ED8', '#7C3AED', '#16A34A', '#F59E0B', '#06B6D4', '#EF4444', '#EC4899', '#8B5CF6'];
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD    = globalWidth('1.2%');
 
 const fmtNum = (n) => {
@@ -105,15 +105,15 @@ function FilterDropdown({ label, options, value, onChange, zIndex = 1 }) {
   );
 }
 
-function StatCard({ icon, iconColor, iconBg, label, value, sub, small }) {
+function StatCard({ icon, iconColor, iconBg, label, value, sub, small, accent }) {
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={18} color={iconColor} />
+    <View style={[styles.statCard, accent && { backgroundColor: accent.bg, borderColor: accent.border }]}>
+      <View style={[styles.statIcon, { backgroundColor: accent ? accent.chip : iconBg }]}>
+        <Ionicons name={icon} size={18} color={accent ? '#fff' : iconColor} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={[styles.statValue, small && { fontSize: 18 }]}>{value ?? '—'}</Text>
+        <Text style={[styles.statLabel, accent && { color: accent.label }]}>{label}</Text>
+        <Text style={[styles.statValue, small && { fontSize: 18 }, accent && { color: accent.value }]}>{value ?? '—'}</Text>
         {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
       </View>
     </View>
@@ -706,11 +706,11 @@ export default function SalesOverviewScreen({ navigation, userDetails, appMetada
           <>
             {/* ── Stats Row 1 — key values ── */}
             <View style={styles.statsRow}>
-              <StatCard icon="cube-outline"      iconColor="#1D4ED8" iconBg="#EFF6FF" label="Total Quantity (Units)"      value={fmtFullNum(totalQty)} />
-              <StatCard icon="gift-outline"       iconColor="#7C3AED" iconBg="#F5F3FF" label="FOC Quantity (Units)"        value={fmtFullNum(totalFocQty)} />
-              <StatCard icon="globe-outline"      iconColor="#06B6D4" iconBg="#ECFEFF" label="Calculated CIF Value (USD)"  value={fmtCurrency(cifUsd)} small />
-              <StatCard icon="storefront-outline" iconColor="#16A34A" iconBg="#F0FDF4" label="Calc. Wholesale (AED)"       value={fmtCurrency(wholesaleAed, 'AED')} small />
-              <StatCard icon="pricetag-outline"   iconColor="#EF4444" iconBg="#FEF2F2" label="Calc. Retail (AED)"          value={fmtCurrency(retailAed, 'AED')} small />
+              <StatCard icon="cube-outline"      accent={colors.accents.blue}  label="Total Quantity (Units)"      value={fmtFullNum(totalQty)} />
+              <StatCard icon="gift-outline"       accent={colors.accents.teal}  label="FOC Quantity (Units)"        value={fmtFullNum(totalFocQty)} />
+              <StatCard icon="globe-outline"      accent={colors.accents.rose}  label="Calculated CIF Value (USD)"  value={fmtCurrency(cifUsd)} small />
+              <StatCard icon="storefront-outline" accent={colors.accents.amber} label="Calc. Wholesale (AED)"       value={fmtCurrency(wholesaleAed, 'AED')} small />
+              <StatCard icon="pricetag-outline"   accent={colors.accents.blue}  label="Calc. Retail (AED)"          value={fmtCurrency(retailAed, 'AED')} small />
             </View>
 
             {/* ── Uploaded sales wide cards ── */}
@@ -749,10 +749,10 @@ export default function SalesOverviewScreen({ navigation, userDetails, appMetada
 
             {/* ── Stats Row 2 — records/matching ── */}
             <View style={styles.statsRow}>
-              <StatCard icon="list-outline"             iconColor="#1D4ED8" iconBg="#EFF6FF" label="Total Records"   value={fmtNum(totalRecords)} />
-              <StatCard icon="checkmark-circle-outline" iconColor="#16A34A" iconBg="#F0FDF4" label="Matched Orders"  value={fmtNum(matchedCount)}      sub={fmtPct(matchedCount, totalRecords)} />
-              <StatCard icon="alert-circle-outline"     iconColor="#F59E0B" iconBg="#FFFBEB" label="Unmatched Sales" value={fmtNum(unmatchedCount)}     sub={fmtPct(unmatchedCount, totalRecords)} />
-              <StatCard icon="eye-outline"              iconColor="#7C3AED" iconBg="#F5F3FF" label="Needs Review"    value={fmtNum(needsReviewCount)}   sub={fmtPct(needsReviewCount, totalRecords)} />
+              <StatCard icon="list-outline"             accent={colors.accents.blue}  label="Total Records"   value={fmtNum(totalRecords)} />
+              <StatCard icon="checkmark-circle-outline" accent={colors.accents.teal}  label="Matched Orders"  value={fmtNum(matchedCount)}      sub={fmtPct(matchedCount, totalRecords)} />
+              <StatCard icon="alert-circle-outline"     accent={colors.accents.amber} label="Unmatched Sales" value={fmtNum(unmatchedCount)}     sub={fmtPct(unmatchedCount, totalRecords)} />
+              <StatCard icon="eye-outline"              accent={colors.accents.rose}  label="Needs Review"    value={fmtNum(needsReviewCount)}   sub={fmtPct(needsReviewCount, totalRecords)} />
             </View>
 
             {/* ── Chart grid ── */}
@@ -1354,7 +1354,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1, minWidth: 150, flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, padding: 14, ...shadow,
+    borderRadius: 14, padding: 14, ...shadow,
   },
   statIcon:  { width: 42, height: 42, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   statLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '600', marginBottom: 3 },
@@ -1367,7 +1367,7 @@ const styles = StyleSheet.create({
     flex: 1, minWidth: 200,
     flexDirection: 'row', alignItems: 'center', gap: 16,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, padding: 16, ...shadow,
+    borderRadius: 14, padding: 16, ...shadow,
   },
   uploadedIcon: { width: 50, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   uploadedLabel: { fontSize: 12, color: colors.textSecondary, fontWeight: '600', marginBottom: 4 },
@@ -1379,7 +1379,7 @@ const styles = StyleSheet.create({
   /* Cards */
   card: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, padding: 16, gap: 12, ...shadow,
+    borderRadius: 14, padding: 16, gap: 12, ...shadow,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle:  { fontSize: 14, fontWeight: '800', color: colors.textPrimary },

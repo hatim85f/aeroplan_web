@@ -189,14 +189,15 @@ function StepHeader({ number, title, subtitle }) {
   );
 }
 
-function ResultCard({ icon, iconColor, iconBg, label, value }) {
+function ResultCard({ icon, accent, label, value }) {
+  const a = accent || colors.accents.blue;
   return (
-    <View style={styles.resultCard}>
-      <View style={[styles.resultIcon, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={20} color={iconColor} />
+    <View style={[styles.resultCard, { backgroundColor: a.bg, borderColor: a.border }]}>
+      <View style={[styles.resultIcon, { backgroundColor: a.chip }]}>
+        <Ionicons name={icon} size={20} color={colors.white} />
       </View>
-      <Text style={styles.resultValue}>{value}</Text>
-      <Text style={styles.resultLabel}>{label}</Text>
+      <Text style={[styles.resultValue, { color: a.value }]}>{value}</Text>
+      <Text style={[styles.resultLabel, { color: a.label }]}>{label}</Text>
     </View>
   );
 }
@@ -732,9 +733,9 @@ export default function ProductBulkImportScreen({
             <StepHeader number="3" title="Import Complete" subtitle="Review the results below" />
 
             <View style={styles.resultCards}>
-              <ResultCard icon="checkmark-circle-outline" iconColor={colors.success} iconBg="#E7F8EF" label="Created" value={importResult.createdCount ?? 0} />
-              <ResultCard icon="close-circle-outline" iconColor={colors.danger} iconBg="#FEF2F2" label="Failed" value={importResult.failedCount ?? 0} />
-              <ResultCard icon="layers-outline" iconColor={colors.primary} iconBg="#E8F0FF" label="Total" value={importResult.total ?? ((importResult.createdCount ?? 0) + (importResult.failedCount ?? 0))} />
+              <ResultCard icon="checkmark-circle-outline" accent={colors.accents.teal} label="Created" value={importResult.createdCount ?? 0} />
+              <ResultCard icon="close-circle-outline" accent={colors.accents.rose} label="Failed" value={importResult.failedCount ?? 0} />
+              <ResultCard icon="layers-outline" accent={colors.accents.blue} label="Total" value={importResult.total ?? ((importResult.createdCount ?? 0) + (importResult.failedCount ?? 0))} />
             </View>
 
             {importResult.failed && importResult.failed.length > 0 ? (
@@ -804,8 +805,8 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, padding: globalWidth("1.3%"), marginBottom: globalHeight("1.5%"),
-    shadowColor: "#0B2B66", shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 2 },
+    borderRadius: 14, padding: globalWidth("1.3%"), marginBottom: globalHeight("1.5%"),
+    shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3,
   },
 
   stepHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: globalHeight("1.5%") },

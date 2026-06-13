@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { createTask, getAssignableUsers } from '../../store/tasks/taskActions';
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 const FREQS = ['daily', 'weekly', 'monthly'];
 const isoToday = () => new Date().toISOString().slice(0, 10);

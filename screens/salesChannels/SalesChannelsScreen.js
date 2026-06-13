@@ -209,17 +209,17 @@ export default function SalesChannelsScreen({ navigation, userDetails, appMetada
       {/* Stats row */}
       <View style={styles.statsRow}>
         {[
-          { label: 'Total Channels', value: channels.length, icon: 'radio-button-on', iconColor: colors.primary, iconBg: '#E8F0FF' },
-          { label: 'Active', value: channels.filter((c) => c.isActive !== false && c.status !== 'inactive').length, icon: 'checkmark-circle-outline', iconColor: colors.success, iconBg: '#E7F8EF' },
-          { label: 'FOC Enabled', value: channels.filter((c) => c.focEnabled).length, icon: 'trending-up-outline', iconColor: '#F97316', iconBg: '#FFF3E0' },
+          { label: 'Total Channels', value: channels.length, icon: 'radio-button-on', iconColor: colors.primary, iconBg: '#E8F0FF', accent: colors.accents.blue },
+          { label: 'Active', value: channels.filter((c) => c.isActive !== false && c.status !== 'inactive').length, icon: 'checkmark-circle-outline', iconColor: colors.success, iconBg: '#E7F8EF', accent: colors.accents.teal },
+          { label: 'FOC Enabled', value: channels.filter((c) => c.focEnabled).length, icon: 'trending-up-outline', iconColor: '#F97316', iconBg: '#FFF3E0', accent: colors.accents.rose },
         ].map((s) => (
-          <View key={s.label} style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: s.iconBg }]}>
-              <Ionicons name={s.icon} size={20} color={s.iconColor} />
+          <View key={s.label} style={[styles.statCard, { backgroundColor: s.accent.bg, borderColor: s.accent.border }]}>
+            <View style={[styles.statIcon, { backgroundColor: s.accent.chip }]}>
+              <Ionicons name={s.icon} size={20} color={colors.white} />
             </View>
             <View>
-              <Text style={styles.statLabel}>{s.label}</Text>
-              <Text style={styles.statValue}>{s.value}</Text>
+              <Text style={[styles.statLabel, { color: s.accent.label }]}>{s.label}</Text>
+              <Text style={[styles.statValue, { color: s.accent.value }]}>{s.value}</Text>
             </View>
           </View>
         ))}
@@ -373,7 +373,7 @@ export default function SalesChannelsScreen({ navigation, userDetails, appMetada
 }
 
 /* ─── Styles ────────────────────────────────────────────────────────────── */
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 
 const styles = StyleSheet.create({
   pageHeader: {

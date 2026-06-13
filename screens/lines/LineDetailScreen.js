@@ -245,13 +245,13 @@ function RightPanel({ line }) {
       <View style={styles.panelCard}>
         <Text style={styles.panelCardTitle}>Line Performance (MTD)</Text>
         <View style={styles.perfRow}>
-          <View style={styles.perfItem}>
-            <Text style={styles.perfValue}>$0</Text>
-            <Text style={styles.perfLabel}>MTD Sales</Text>
+          <View style={[styles.perfItem, { backgroundColor: colors.accents.blue.bg, borderWidth: 1, borderColor: colors.accents.blue.border }]}>
+            <Text style={[styles.perfValue, { color: colors.accents.blue.value }]}>$0</Text>
+            <Text style={[styles.perfLabel, { color: colors.accents.blue.label }]}>MTD Sales</Text>
           </View>
-          <View style={styles.perfItem}>
-            <Text style={styles.perfValue}>—%</Text>
-            <Text style={styles.perfLabel}>Achievement</Text>
+          <View style={[styles.perfItem, { backgroundColor: colors.accents.teal.bg, borderWidth: 1, borderColor: colors.accents.teal.border }]}>
+            <Text style={[styles.perfValue, { color: colors.accents.teal.value }]}>—%</Text>
+            <Text style={[styles.perfLabel, { color: colors.accents.teal.label }]}>Achievement</Text>
           </View>
         </View>
       </View>
@@ -520,12 +520,7 @@ export default function LineDetailScreen({ navigation, route, userDetails, appMe
 }
 
 /* ─── Styles ────────────────────────────────────────────────────────────── */
-const shadow = {
-  shadowColor: '#0B2B66',
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  shadowOffset: { width: 0, height: 2 },
-};
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 
 const styles = StyleSheet.create({
   centered: { alignItems: 'center', padding: 32, gap: 12 },

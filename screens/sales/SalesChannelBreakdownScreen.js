@@ -23,7 +23,7 @@ const MONTH_OPTS = [
 ];
 
 const CHANNEL_COLORS = ['#1D4ED8', '#7C3AED', '#16A34A', '#F59E0B', '#06B6D4', '#EF4444', '#EC4899', '#8B5CF6'];
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD = globalWidth('1.2%');
 
 const fmtNum = (n) => {
@@ -374,17 +374,17 @@ export default function SalesChannelBreakdownScreen({ navigation, route, userDet
         {/* ── Summary strip ── */}
         <View style={styles.summaryStrip}>
           {[
-            { label: 'CHANNELS', value: String(account ? Object.keys(channelData).length : channels.length) },
-            { label: 'TOTAL RECORDS',  value: fmtNum(totalRecords) },
-            { label: 'TOTAL QTY',      value: fmtFull(totalQty) },
-            { label: 'FOC QTY',        value: fmtFull(totalFoc) },
-            { label: 'CIF VALUE (USD)',  value: fmtCurrency(totalCif) },
-            { label: 'WHOLESALE (AED)', value: fmtCurrency(totalWs, 'AED') },
+            { label: 'CHANNELS', value: String(account ? Object.keys(channelData).length : channels.length), accent: colors.accents.blue },
+            { label: 'TOTAL RECORDS',  value: fmtNum(totalRecords), accent: colors.accents.teal },
+            { label: 'TOTAL QTY',      value: fmtFull(totalQty), accent: colors.accents.rose },
+            { label: 'FOC QTY',        value: fmtFull(totalFoc), accent: colors.accents.amber },
+            { label: 'CIF VALUE (USD)',  value: fmtCurrency(totalCif), accent: colors.accents.blue },
+            { label: 'WHOLESALE (AED)', value: fmtCurrency(totalWs, 'AED'), accent: colors.accents.teal },
           ].map((s, i, arr) => (
             <React.Fragment key={s.label}>
-              <View style={styles.summaryStat}>
-                <Text style={styles.summaryLabel}>{s.label}</Text>
-                <Text style={styles.summaryValue}>{s.value}</Text>
+              <View style={[styles.summaryStat, { backgroundColor: s.accent.bg, borderColor: s.accent.border }]}>
+                <Text style={[styles.summaryLabel, { color: s.accent.label }]}>{s.label}</Text>
+                <Text style={[styles.summaryValue, { color: s.accent.value }]}>{s.value}</Text>
               </View>
               {i < arr.length - 1 && <View style={styles.summaryDivider} />}
             </React.Fragment>
@@ -597,25 +597,25 @@ export default function SalesChannelBreakdownScreen({ navigation, route, userDet
                 <Text style={styles.grandTotalTitle}>Grand Total — All Channels</Text>
               </View>
               <View style={styles.grandTotalGrid}>
-                <View style={styles.grandTotalCard}>
-                  <Text style={styles.grandTotalCardLabel}>Total Records</Text>
-                  <Text style={styles.grandTotalCardValue}>{fmtNum(totalRecords)}</Text>
+                <View style={[styles.grandTotalCard, { backgroundColor: colors.accents.blue.bg, borderColor: colors.accents.blue.border }]}>
+                  <Text style={[styles.grandTotalCardLabel, { color: colors.accents.blue.label }]}>Total Records</Text>
+                  <Text style={[styles.grandTotalCardValue, { color: colors.accents.blue.value }]}>{fmtNum(totalRecords)}</Text>
                 </View>
-                <View style={styles.grandTotalCard}>
-                  <Text style={styles.grandTotalCardLabel}>Total QTY (Units)</Text>
-                  <Text style={styles.grandTotalCardValue}>{fmtFull(totalQty)}</Text>
+                <View style={[styles.grandTotalCard, { backgroundColor: colors.accents.teal.bg, borderColor: colors.accents.teal.border }]}>
+                  <Text style={[styles.grandTotalCardLabel, { color: colors.accents.teal.label }]}>Total QTY (Units)</Text>
+                  <Text style={[styles.grandTotalCardValue, { color: colors.accents.teal.value }]}>{fmtFull(totalQty)}</Text>
                 </View>
-                <View style={styles.grandTotalCard}>
-                  <Text style={styles.grandTotalCardLabel}>FOC QTY</Text>
-                  <Text style={styles.grandTotalCardValue}>{fmtFull(totalFoc)}</Text>
+                <View style={[styles.grandTotalCard, { backgroundColor: colors.accents.rose.bg, borderColor: colors.accents.rose.border }]}>
+                  <Text style={[styles.grandTotalCardLabel, { color: colors.accents.rose.label }]}>FOC QTY</Text>
+                  <Text style={[styles.grandTotalCardValue, { color: colors.accents.rose.value }]}>{fmtFull(totalFoc)}</Text>
                 </View>
-                <View style={styles.grandTotalCard}>
-                  <Text style={styles.grandTotalCardLabel}>Total CIF (USD)</Text>
-                  <Text style={styles.grandTotalCardValue}>{fmtCurrency(totalCif)}</Text>
+                <View style={[styles.grandTotalCard, { backgroundColor: colors.accents.amber.bg, borderColor: colors.accents.amber.border }]}>
+                  <Text style={[styles.grandTotalCardLabel, { color: colors.accents.amber.label }]}>Total CIF (USD)</Text>
+                  <Text style={[styles.grandTotalCardValue, { color: colors.accents.amber.value }]}>{fmtCurrency(totalCif)}</Text>
                 </View>
-                <View style={styles.grandTotalCard}>
-                  <Text style={styles.grandTotalCardLabel}>Total Value (AED)</Text>
-                  <Text style={styles.grandTotalCardValue}>{fmtCurrency(totalWs, 'AED')}</Text>
+                <View style={[styles.grandTotalCard, { backgroundColor: colors.accents.blue.bg, borderColor: colors.accents.blue.border }]}>
+                  <Text style={[styles.grandTotalCardLabel, { color: colors.accents.blue.label }]}>Total Value (AED)</Text>
+                  <Text style={[styles.grandTotalCardValue, { color: colors.accents.blue.value }]}>{fmtCurrency(totalWs, 'AED')}</Text>
                 </View>
               </View>
             </View>
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     paddingHorizontal: PAD,
   },
-  summaryStat:    { flex: 1, minWidth: 110, paddingVertical: globalHeight('1.1%'), paddingHorizontal: 10 },
+  summaryStat:    { flex: 1, minWidth: 110, paddingVertical: globalHeight('1.1%'), paddingHorizontal: 12, borderWidth: 1, borderRadius: 12, margin: 4 },
   summaryDivider: { width: 1, backgroundColor: colors.border, alignSelf: 'stretch', marginVertical: globalHeight('0.8%') },
   summaryLabel:   { fontSize: 9, color: colors.textMuted, fontWeight: '700', letterSpacing: 0.5, marginBottom: 5 },
   summaryValue:   { fontSize: 17, fontWeight: '800', color: colors.textPrimary },
@@ -731,7 +731,7 @@ const styles = StyleSheet.create({
   /* Channel section */
   channelSection: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
   /* Grand total */
   grandTotalSection: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.primary + '30',
     padding: 18,

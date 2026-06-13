@@ -19,7 +19,7 @@ import {
 } from '../../store/sharedSalesRules/sharedSalesRulesActions';
 
 const PAD = globalWidth('1.2%');
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const isManager = (role) => ['admin', 'manager', 'senior_manager'].includes(String(role || '').toLowerCase());
 const fmtDate = (d) => (d ? String(d).slice(0, 10) : '-');
 const pickId = (item) => item?._id || item?.id || item?.productId || item?.channelId || '';

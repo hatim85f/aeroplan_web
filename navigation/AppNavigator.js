@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 
 import AuthNavigator from "./AuthNavigator";
 import MainNavigator from "./MainNavigator";
+import DownloadAppScreen from "../screens/DownloadAppScreen";
 import { linking } from "./linking";
 import { colors } from "../constants/colors";
 import { defaultAppMetadata } from "../constants/metadataDefaults";
@@ -19,6 +20,8 @@ export default function AppNavigator() {
   const [isReady, setIsReady] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
   const [appMetadata, setAppMetadata] = useState(defaultAppMetadata);
+  const { width } = useWindowDimensions();
+  const isMobile = width > 0 && width < 768;
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -67,6 +70,14 @@ export default function AppNavigator() {
     await clearUserDetails();
     setUserDetails(null);
   };
+
+  // On mobile viewports the web app redirects to the "get the app" page —
+  // except the public legal URLs, which must stay reachable for store review.
+  const pathname = (typeof window !== "undefined" && window.location && window.location.pathname) || "";
+  const isLegalRoute = /privacy-policy|terms/i.test(pathname);
+  if (isReady && isMobile && !isLegalRoute) {
+    return <DownloadAppScreen appMetadata={appMetadata} />;
+  }
 
   if (!isReady) {
     return (

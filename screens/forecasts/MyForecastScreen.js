@@ -59,20 +59,20 @@ const isManager = (role) =>
 const THIS_YEAR = new Date().getFullYear();
 const THIS_MONTH = new Date().getMonth() + 1;
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD = globalWidth('1.2%');
 
 const EMPTY_FORM = { accountId: '', inputType: 'units', quantity: '', value: '', notes: '', editingId: '' };
 
-function StatCard({ icon, iconColor, iconBg, label, value }) {
+function StatCard({ icon, label, value, accent }) {
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={20} color={iconColor} />
+    <View style={[styles.statCard, { backgroundColor: accent.bg, borderColor: accent.border }]}>
+      <View style={[styles.statIcon, { backgroundColor: accent.chip }]}>
+        <Ionicons name={icon} size={20} color="#fff" />
       </View>
       <View style={styles.statBody}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value ?? '—'}</Text>
+        <Text style={[styles.statLabel, { color: accent.label }]}>{label}</Text>
+        <Text style={[styles.statValue, { color: accent.value }]}>{value ?? '—'}</Text>
       </View>
     </View>
   );
@@ -371,10 +371,10 @@ export default function MyForecastScreen({ navigation, userDetails, appMetadata,
 
         {/* ── Stat Cards ── */}
         <View style={styles.statsRow}>
-          <StatCard icon="flag-outline" iconColor="#1D4ED8" iconBg="#EFF6FF" label="Monthly Target Value" value={fmtCurrency(summary.targetValue, currency)} />
-          <StatCard icon="trending-up-outline" iconColor="#15803D" iconBg="#F0FDF4" label="Forecasted Value" value={fmtCurrency(summary.forecastValue, currency)} />
-          <StatCard icon="alert-circle-outline" iconColor="#DC2626" iconBg="#FEF2F2" label="Deficit Value" value={fmtCurrency(summary.deficitValue, currency)} />
-          <StatCard icon="speedometer-outline" iconColor="#7C3AED" iconBg="#F5F3FF" label="Coverage" value={`${fmtNumber(summary.coverage)}%`} />
+          <StatCard icon="flag-outline" accent={colors.accents.blue} label="Monthly Target Value" value={fmtCurrency(summary.targetValue, currency)} />
+          <StatCard icon="trending-up-outline" accent={colors.accents.teal} label="Forecasted Value" value={fmtCurrency(summary.forecastValue, currency)} />
+          <StatCard icon="alert-circle-outline" accent={colors.accents.rose} label="Deficit Value" value={fmtCurrency(summary.deficitValue, currency)} />
+          <StatCard icon="speedometer-outline" accent={colors.accents.amber} label="Coverage" value={`${fmtNumber(summary.coverage)}%`} />
         </View>
 
         {/* ── Channel filter + progress ── */}
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1, minWidth: 150, flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, padding: 16, ...shadow,
+    borderRadius: 14, padding: 16, ...shadow,
   },
   statIcon: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   statBody: { flex: 1 },
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
 
   progressCard: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, padding: 16, gap: 10, ...shadow, zIndex: 5,
+    borderRadius: 14, padding: 16, gap: 10, ...shadow, zIndex: 5,
   },
   progressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   progressTrack: { height: 8, backgroundColor: colors.border + '90', borderRadius: 4, overflow: 'hidden' },
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, padding: 16, gap: 10, ...shadow,
+    borderRadius: 14, padding: 16, gap: 10, ...shadow,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },

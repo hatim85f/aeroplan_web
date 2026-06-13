@@ -23,21 +23,21 @@ const isManager = (role) =>
 const THIS_YEAR = new Date().getFullYear();
 const THIS_MONTH = new Date().getMonth() + 1;
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD = globalWidth('1.2%');
 
 const STATUS_FILTERS = ['all', 'matched', 'over', 'under', 'missed'];
 
-function StatCard({ icon, iconColor, iconBg, label, value, sub }) {
+function StatCard({ icon, label, value, sub, accent }) {
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={20} color={iconColor} />
+    <View style={[styles.statCard, { backgroundColor: accent.bg, borderColor: accent.border }]}>
+      <View style={[styles.statIcon, { backgroundColor: accent.chip }]}>
+        <Ionicons name={icon} size={20} color="#fff" />
       </View>
       <View style={styles.statBody}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value ?? '—'}</Text>
-        {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
+        <Text style={[styles.statLabel, { color: accent.label }]}>{label}</Text>
+        <Text style={[styles.statValue, { color: accent.value }]}>{value ?? '—'}</Text>
+        {sub ? <Text style={[styles.statSub, { color: accent.label }]}>{sub}</Text> : null}
       </View>
     </View>
   );
@@ -168,10 +168,10 @@ export default function ForecastMatchingScreen({ navigation, userDetails, appMet
 
         {/* ── Stat Cards ── */}
         <View style={styles.statsRow}>
-          <StatCard icon="flag-outline" iconColor="#1D4ED8" iconBg="#EFF6FF" label="Forecasted Value" value={fmtCurrency(summary?.forecastValue)} sub={`${fmtNumber(summary?.forecastUnits)} units`} />
-          <StatCard icon="cash-outline" iconColor="#15803D" iconBg="#F0FDF4" label="Actual Sales Value" value={fmtCurrency(summary?.salesValue)} sub={`${fmtNumber(summary?.salesUnits)} units`} />
-          <StatCard icon="speedometer-outline" iconColor="#7C3AED" iconBg="#F5F3FF" label="Value Match" value={`${fmtNumber(summary?.valueAchievementPercentage)}%`} />
-          <StatCard icon="cube-outline" iconColor="#F59E0B" iconBg="#FFFBEB" label="Units Match" value={`${fmtNumber(summary?.unitsAchievementPercentage)}%`} />
+          <StatCard icon="flag-outline" accent={colors.accents.blue} label="Forecasted Value" value={fmtCurrency(summary?.forecastValue)} sub={`${fmtNumber(summary?.forecastUnits)} units`} />
+          <StatCard icon="cash-outline" accent={colors.accents.teal} label="Actual Sales Value" value={fmtCurrency(summary?.salesValue)} sub={`${fmtNumber(summary?.salesUnits)} units`} />
+          <StatCard icon="speedometer-outline" accent={colors.accents.rose} label="Value Match" value={`${fmtNumber(summary?.valueAchievementPercentage)}%`} />
+          <StatCard icon="cube-outline" accent={colors.accents.amber} label="Units Match" value={`${fmtNumber(summary?.unitsAchievementPercentage)}%`} />
         </View>
 
         {loading ? (
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1, minWidth: 150, flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, padding: 16, ...shadow,
+    borderRadius: 14, padding: 16, ...shadow,
   },
   statIcon: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   statBody: { flex: 1 },
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: 12, padding: 16, gap: 10, ...shadow,
+    borderRadius: 14, padding: 16, gap: 10, ...shadow,
   },
   cardFill: { flex: 1, minHeight: 0 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 },

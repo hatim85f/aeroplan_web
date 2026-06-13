@@ -8,7 +8,7 @@ import { globalWidth } from '../../constants/globalWidth';
 import { APP_VERSION, BUILD_NUMBER, COPYRIGHT, SUPPORT_EMAIL } from '../../constants/legal';
 import { deleteMyAccount } from '../../store/auth/authActions';
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD = globalWidth('1.2%');
 
 /* ── Reusable tappable / static row ── */

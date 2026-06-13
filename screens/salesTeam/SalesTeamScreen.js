@@ -31,16 +31,16 @@ function getInitials(name) {
 }
 
 /* ─── Sub-components ─────────────────────────────────────────────────────── */
-function StatCard({ icon, iconColor, iconBg, label, value, sub }) {
+function StatCard({ icon, iconColor, iconBg, label, value, sub, accent }) {
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={20} color={iconColor} />
+    <View style={[styles.statCard, accent && { backgroundColor: accent.bg, borderColor: accent.border }]}>
+      <View style={[styles.statIcon, accent ? { backgroundColor: accent.chip } : { backgroundColor: iconBg }]}>
+        <Ionicons name={icon} size={20} color={accent ? colors.white : iconColor} />
       </View>
       <View style={styles.statBody}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value ?? '—'}</Text>
-        {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
+        <Text style={[styles.statLabel, accent && { color: accent.label }]}>{label}</Text>
+        <Text style={[styles.statValue, accent && { color: accent.value }]}>{value ?? '—'}</Text>
+        {sub ? <Text style={[styles.statSub, accent && { color: accent.label }]}>{sub}</Text> : null}
       </View>
     </View>
   );
@@ -269,24 +269,28 @@ export default function SalesTeamScreen({ navigation, userDetails, appMetadata, 
         <StatCard
           icon="people-outline" iconColor="#0F6FFF" iconBg="#E8F0FF"
           label="Total Salespeople" value={pagination.total}
+          accent={colors.accents.blue}
         />
         <StatCard
           icon="checkmark-circle-outline" iconColor="#059669" iconBg="#ECFDF5"
           label="Active"
           value={activeCount}
           sub={members.length ? `${Math.round(activeCount / members.length * 100)}% of total` : ''}
+          accent={colors.accents.teal}
         />
         <StatCard
           icon="close-circle-outline" iconColor="#DC2626" iconBg="#FEF2F2"
           label="Inactive"
           value={inactiveCount}
           sub={members.length ? `${Math.round(inactiveCount / members.length * 100)}% of total` : ''}
+          accent={colors.accents.rose}
         />
         <StatCard
           icon="business-outline" iconColor="#F97316" iconBg="#FFF3E0"
           label="Assigned Accounts"
           value={totalAssigned}
           sub="Across this page"
+          accent={colors.accents.amber}
         />
       </View>
 

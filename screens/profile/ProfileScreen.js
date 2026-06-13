@@ -619,17 +619,17 @@ export default function ProfileScreen({ navigation, userDetails, appMetadata, on
 
               <SectionCard title="Account Stats">
                 <View style={styles.statsGrid}>
-                  <View style={styles.statBox}>
-                    <Text style={styles.statBoxValue}>{user.teamsCount || 0}</Text>
-                    <Text style={styles.statBoxLabel}>Teams</Text>
+                  <View style={[styles.statBox, { backgroundColor: colors.accents.blue.bg, borderWidth: 1, borderColor: colors.accents.blue.border }]}>
+                    <Text style={[styles.statBoxValue, { color: colors.accents.blue.value }]}>{user.teamsCount || 0}</Text>
+                    <Text style={[styles.statBoxLabel, { color: colors.accents.blue.label }]}>Teams</Text>
                   </View>
-                  <View style={styles.statBox}>
-                    <Text style={styles.statBoxValue}>{user.activeInvitationsCount || user.invitationsCount || 0}</Text>
-                    <Text style={styles.statBoxLabel}>Invitations</Text>
+                  <View style={[styles.statBox, { backgroundColor: colors.accents.teal.bg, borderWidth: 1, borderColor: colors.accents.teal.border }]}>
+                    <Text style={[styles.statBoxValue, { color: colors.accents.teal.value }]}>{user.activeInvitationsCount || user.invitationsCount || 0}</Text>
+                    <Text style={[styles.statBoxLabel, { color: colors.accents.teal.label }]}>Invitations</Text>
                   </View>
-                  <View style={styles.statBox}>
-                    <Text style={styles.statBoxValue}>{formatRole(profile.role)}</Text>
-                    <Text style={styles.statBoxLabel}>Role</Text>
+                  <View style={[styles.statBox, { backgroundColor: colors.accents.rose.bg, borderWidth: 1, borderColor: colors.accents.rose.border }]}>
+                    <Text style={[styles.statBoxValue, { color: colors.accents.rose.value }]}>{formatRole(profile.role)}</Text>
+                    <Text style={[styles.statBoxLabel, { color: colors.accents.rose.label }]}>Role</Text>
                   </View>
                 </View>
               </SectionCard>
@@ -643,12 +643,7 @@ export default function ProfileScreen({ navigation, userDetails, appMetadata, on
 }
 
 /* ─── Styles ─────────────────────────────────────────────────────────────── */
-const shadow = {
-  shadowColor: '#0B2B66',
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  shadowOffset: { width: 0, height: 2 },
-};
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 
 const styles = StyleSheet.create({
   pageContent: { flexGrow: 1 },
@@ -665,7 +660,7 @@ const styles = StyleSheet.create({
 
   /* Hero */
   heroCard: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 14,
     backgroundColor: colors.surface, padding: 20, ...shadow,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     flexWrap: 'wrap', gap: 16, marginBottom: globalHeight('1.2%'),
@@ -698,7 +693,7 @@ const styles = StyleSheet.create({
 
   /* Section card */
   card: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 14,
     backgroundColor: colors.surface, padding: 20, ...shadow,
   },
   cardHeader:   { marginBottom: 14 },
@@ -751,7 +746,7 @@ const styles = StyleSheet.create({
   avatarInitials: { color: colors.white, fontWeight: '800' },
 
   /* Danger zone */
-  dangerZone: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 16, ...shadow, backgroundColor: colors.surface },
+  dangerZone: { borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 16, ...shadow, backgroundColor: colors.surface },
   btnSignOut:     { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
   btnSignOutText: { fontSize: 14, fontWeight: '700', color: colors.danger },
 

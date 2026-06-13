@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Image, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
@@ -200,6 +200,22 @@ export default function AppSidebar({ onSignOut, appMetadata, displayName, role, 
     if (route) navigation.navigate(route, params);
   };
 
+  // Accordion: each section collapses to just its title + chevron. The section
+  // containing the active route starts expanded; if none match, MAIN is opened.
+  const sections = useMemo(() => getSidebarSections(role), [role]);
+  const initialOpen = useMemo(() => {
+    const map = {};
+    sections.forEach((s) => {
+      map[s.title] = s.items.some((it) => activeRoute === it.route || activeRoute === it.label);
+    });
+    if (!Object.values(map).some(Boolean) && sections[0]) map[sections[0].title] = true;
+    return map;
+  }, [sections, activeRoute]);
+  const [openSections, setOpenSections] = useState(initialOpen);
+  useEffect(() => { setOpenSections(initialOpen); }, [initialOpen]);
+  const toggleSection = (title) =>
+    setOpenSections((prev) => ({ ...prev, [title]: !prev[title] }));
+
   return (
     <View style={styles.sidebar}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -230,31 +246,49 @@ export default function AppSidebar({ onSignOut, appMetadata, displayName, role, 
           </View>
         </View>
 
-        {/* Nav sections */}
-        {getSidebarSections(role).map((section) => (
-          <View key={section.title} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            {section.items.map(({ icon, label, route, params }) => {
-              const active = activeRoute === route || activeRoute === label;
-              return (
-                <Pressable
-                  key={label}
-                  onPress={() => go(route, params)}
-                  style={[styles.navItem, active && styles.navItemActive]}
-                >
-                  <Ionicons
-                    name={icon}
-                    size={globalWidth('1.05%')}
-                    color={active ? '#fff' : colors.textSecondary}
-                  />
-                  <Text style={[styles.navItemText, active && styles.navItemTextActive]}>
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        ))}
+        {/* Nav sections (accordion) */}
+        {sections.map((section) => {
+          const isOpen = !!openSections[section.title];
+          return (
+            <View key={section.title} style={styles.section}>
+              <Pressable
+                onPress={() => toggleSection(section.title)}
+                style={({ hovered }) => [styles.sectionHeader, hovered && styles.sectionHeaderHover]}
+              >
+                <Text style={[styles.sectionTitle, isOpen && styles.sectionTitleOpen]}>{section.title}</Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={globalWidth('0.85%')}
+                  color={isOpen ? colors.primary : colors.textMuted}
+                  style={[styles.chevron, { transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }]}
+                />
+              </Pressable>
+              {isOpen && (
+                <View style={styles.itemsWrap}>
+                  {section.items.map(({ icon, label, route, params }) => {
+                    const active = activeRoute === route || activeRoute === label;
+                    return (
+                      <Pressable
+                        key={label}
+                        onPress={() => go(route, params)}
+                        style={[styles.navItem, active && styles.navItemActive]}
+                      >
+                        <Ionicons
+                          name={icon}
+                          size={globalWidth('1.05%')}
+                          color={active ? '#fff' : colors.textSecondary}
+                        />
+                        <Text style={[styles.navItemText, active && styles.navItemTextActive]}>
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          );
+        })}
 
         {/* Logout */}
         <View style={styles.divider} />
@@ -344,15 +378,45 @@ const styles = StyleSheet.create({
 
   /* Sections */
   section: {
-    marginBottom: globalHeight('1.2%'),
+    marginBottom: globalHeight('0.8%'),
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: globalWidth('0.6%'),
+    paddingVertical: globalHeight('0.7%'),
+    marginBottom: globalHeight('0.2%'),
+    borderRadius: 8,
+    cursor: 'pointer',
+    transitionProperty: 'background-color',
+    transitionDuration: '160ms',
+  },
+  sectionHeaderHover: {
+    backgroundColor: colors.surfaceSoft,
   },
   sectionTitle: {
-    color: colors.textMuted,
-    fontSize: globalWidth('0.52%'),
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    marginBottom: globalHeight('0.35%'),
-    paddingHorizontal: globalWidth('0.55%'),
+    color: colors.textSecondary,
+    fontSize: globalWidth('0.66%'),
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  sectionTitleOpen: {
+    color: colors.textPrimary,
+  },
+  chevron: {
+    transitionProperty: 'transform',
+    transitionDuration: '220ms',
+    transitionTimingFunction: 'ease',
+  },
+  itemsWrap: {
+    overflow: 'hidden',
+    animationKeyframes: {
+      '0%': { opacity: 0, transform: [{ translateY: -8 }] },
+      '100%': { opacity: 1, transform: [{ translateY: 0 }] },
+    },
+    animationDuration: '240ms',
+    animationTimingFunction: 'ease-out',
   },
 
   /* Nav items */

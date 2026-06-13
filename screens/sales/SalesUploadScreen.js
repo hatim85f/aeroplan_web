@@ -70,7 +70,7 @@ const BATCH_SIZE    = 200;   // smaller batches reduce Heroku/browser timeout ri
 const PREVIEW_LIMIT = 200;   // rows shown in the preview table
 const FILTER_VALUE_DISPLAY_LIMIT = 300;
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD    = globalWidth('1.2%');
 const createFilter = (id) => ({ id, column: '', query: '', values: [] });
 

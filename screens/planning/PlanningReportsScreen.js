@@ -10,18 +10,18 @@ import { globalWidth } from '../../constants/globalWidth';
 import { getAccountsReport } from '../../store/planning/planningActions';
 import { fmtDisplayDate, fmtNum, fmtUSD, isManagerRole, isoDate } from './planningUtils';
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD = globalWidth('1.2%');
 
 const startOfYear = () => isoDate(new Date(new Date().getFullYear(), 0, 1));
 
-function StatCard({ icon, iconColor, iconBg, label, value }) {
+function StatCard({ icon, label, value, accent }) {
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}><Ionicons name={icon} size={18} color={iconColor} /></View>
+    <View style={[styles.statCard, { backgroundColor: accent.bg, borderColor: accent.border }]}>
+      <View style={[styles.statIcon, { backgroundColor: accent.chip }]}><Ionicons name={icon} size={18} color="#fff" /></View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value ?? '—'}</Text>
+        <Text style={[styles.statLabel, { color: accent.label }]}>{label}</Text>
+        <Text style={[styles.statValue, { color: accent.value }]}>{value ?? '—'}</Text>
       </View>
     </View>
   );
@@ -84,11 +84,11 @@ export default function PlanningReportsScreen({ navigation, userDetails, appMeta
         </View>
 
         <View style={styles.statsRow}>
-          <StatCard icon="business-outline" iconColor="#1D4ED8" iconBg="#EFF6FF" label="Accounts Planned" value={fmtNum(cards.totalAccountsPlanned)} />
-          <StatCard icon="navigate-outline" iconColor="#7C3AED" iconBg="#F5F3FF" label="Planned Visits" value={fmtNum(cards.totalPlannedVisits)} />
-          <StatCard icon="checkmark-done-outline" iconColor="#15803D" iconBg="#F0FDF4" label="Submitted Visits" value={fmtNum(cards.totalSubmittedVisits)} />
-          <StatCard icon="cash-outline" iconColor="#15803D" iconBg="#DCFCE7" label="Business Value" value={fmtUSD(cards.totalBusinessValue)} />
-          <StatCard icon="cube-outline" iconColor="#F59E0B" iconBg="#FFFBEB" label="Business Units" value={fmtNum(cards.totalBusinessUnits)} />
+          <StatCard icon="business-outline" accent={colors.accents.blue} label="Accounts Planned" value={fmtNum(cards.totalAccountsPlanned)} />
+          <StatCard icon="navigate-outline" accent={colors.accents.teal} label="Planned Visits" value={fmtNum(cards.totalPlannedVisits)} />
+          <StatCard icon="checkmark-done-outline" accent={colors.accents.rose} label="Submitted Visits" value={fmtNum(cards.totalSubmittedVisits)} />
+          <StatCard icon="cash-outline" accent={colors.accents.amber} label="Business Value" value={fmtUSD(cards.totalBusinessValue)} />
+          <StatCard icon="cube-outline" accent={colors.accents.blue} label="Business Units" value={fmtNum(cards.totalBusinessUnits)} />
         </View>
 
         {loading ? (
@@ -179,12 +179,12 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: colors.surface, fontSize: 12, color: colors.textPrimary, minWidth: 120 },
 
   statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  statCard: { flex: 1, minWidth: 140, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, ...shadow },
+  statCard: { flex: 1, minWidth: 140, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, ...shadow },
   statIcon: { width: 36, height: 36, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   statLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '600', marginBottom: 2 },
   statValue: { fontSize: 18, fontWeight: '800', color: colors.textPrimary },
 
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 16, gap: 8, ...shadow },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 16, gap: 8, ...shadow },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle: { fontSize: 14, fontWeight: '800', color: colors.textPrimary },
   cardMeta: { fontSize: 12, color: colors.textMuted },

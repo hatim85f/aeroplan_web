@@ -34,14 +34,14 @@ function StatusPill({ active }) {
 }
 
 /* ─── Metric Card ───────────────────────────────────────────────────────── */
-function MetricCard({ label, value, icon, color }) {
+function MetricCard({ label, value, icon, color, accent }) {
   return (
-    <View style={styles.metricCard}>
-      <View style={[styles.metricIconBox, { backgroundColor: color + '22' }]}>
-        <Ionicons name={icon} size={18} color={color} />
+    <View style={[styles.metricCard, accent && { backgroundColor: accent.bg, borderColor: accent.border }]}>
+      <View style={[styles.metricIconBox, accent ? { backgroundColor: accent.chip } : { backgroundColor: color + '22' }]}>
+        <Ionicons name={icon} size={18} color={accent ? colors.white : color} />
       </View>
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={[styles.metricValue, accent && { color: accent.value }]}>{value}</Text>
+      <Text style={[styles.metricLabel, accent && { color: accent.label }]}>{label}</Text>
     </View>
   );
 }
@@ -95,10 +95,10 @@ function ManagerView({ lines, loading, error, navigation, token, onRefresh }) {
 
       {/* Metrics */}
       <View style={styles.metricsRow}>
-        <MetricCard label="Total Lines" value={lines.length} icon="layers-outline" color={colors.primary} />
-        <MetricCard label="Total Teams" value={totalTeams} icon="people-outline" color="#8B5CF6" />
-        <MetricCard label="Total Members" value={totalMembers} icon="person-outline" color={colors.success} />
-        <MetricCard label="Active Lines" value={activeLines} icon="checkmark-circle-outline" color={colors.warning} />
+        <MetricCard label="Total Lines" value={lines.length} icon="layers-outline" color={colors.primary} accent={colors.accents.blue} />
+        <MetricCard label="Total Teams" value={totalTeams} icon="people-outline" color="#8B5CF6" accent={colors.accents.teal} />
+        <MetricCard label="Total Members" value={totalMembers} icon="person-outline" color={colors.success} accent={colors.accents.rose} />
+        <MetricCard label="Active Lines" value={activeLines} icon="checkmark-circle-outline" color={colors.warning} accent={colors.accents.amber} />
       </View>
 
       {/* Table Card */}
@@ -385,12 +385,7 @@ export default function LinesScreen({ navigation, userDetails, appMetadata, onSi
 }
 
 /* ─── Styles ────────────────────────────────────────────────────────────── */
-const shadow = {
-  shadowColor: '#0B2B66',
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  shadowOffset: { width: 0, height: 2 },
-};
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 
 const styles = StyleSheet.create({
   pageHeader: {

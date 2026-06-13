@@ -20,7 +20,7 @@ import {
 } from '../../store/stockAccounts/stockAccountActions';
 import { MovementBadge } from './StockAccountsScreen';
 
-const shadow = { shadowColor: '#0B2B66', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } };
+const shadow = { shadowColor: '#11224A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 3 };
 const PAD = globalWidth('1.2%');
 
 const isManager = (role) =>
@@ -302,11 +302,11 @@ export default function StockAccountDetailsScreen({ navigation, route, userDetai
           <>
             {/* ── Summary cards ── */}
             <View style={styles.statsRow}>
-              <SummaryCard icon="cube-outline" iconColor="#1D4ED8" iconBg="#EFF6FF" label="Items Tracked" value={fmtN(summary?.itemsCount)} />
-              <SummaryCard icon="time-outline" iconColor="#7C3AED" iconBg="#F5F3FF" label="Last Updated" value={fmtDateTime(summary?.lastUpdatedAt)} small />
-              <SummaryCard icon="person-outline" iconColor="#15803D" iconBg="#F0FDF4" label="Updated By" value={summary?.lastUpdatedBy || '—'} small />
-              <SummaryCard icon="trending-down-outline" iconColor="#DC2626" iconBg="#FEF2F2" label="Negative Movement" value={fmtN(summary?.negativeMovementCount)} />
-              <SummaryCard icon="cart-outline" iconColor="#B45309" iconBg="#FFFBEB" label="Added from Sales" value={fmtSigned(summary?.addedFromSalesTotal)} />
+              <SummaryCard icon="cube-outline" iconColor="#1D4ED8" iconBg="#EFF6FF" label="Items Tracked" value={fmtN(summary?.itemsCount)} accent={colors.accents.blue} />
+              <SummaryCard icon="time-outline" iconColor="#7C3AED" iconBg="#F5F3FF" label="Last Updated" value={fmtDateTime(summary?.lastUpdatedAt)} small accent={colors.accents.teal} />
+              <SummaryCard icon="person-outline" iconColor="#15803D" iconBg="#F0FDF4" label="Updated By" value={summary?.lastUpdatedBy || '—'} small accent={colors.accents.rose} />
+              <SummaryCard icon="trending-down-outline" iconColor="#DC2626" iconBg="#FEF2F2" label="Negative Movement" value={fmtN(summary?.negativeMovementCount)} accent={colors.accents.amber} />
+              <SummaryCard icon="cart-outline" iconColor="#B45309" iconBg="#FFFBEB" label="Added from Sales" value={fmtSigned(summary?.addedFromSalesTotal)} accent={colors.accents.purple} />
             </View>
 
             {/* ── Linked accounts ── */}
@@ -588,15 +588,15 @@ export default function StockAccountDetailsScreen({ navigation, route, userDetai
   );
 }
 
-function SummaryCard({ icon, iconColor, iconBg, label, value, small }) {
+function SummaryCard({ icon, iconColor, iconBg, label, value, small, accent }) {
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={17} color={iconColor} />
+    <View style={[styles.statCard, accent && { backgroundColor: accent.bg, borderColor: accent.border }]}>
+      <View style={[styles.statIcon, accent ? { backgroundColor: accent.chip } : { backgroundColor: iconBg }]}>
+        <Ionicons name={icon} size={17} color={accent ? colors.white : iconColor} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={[styles.statValue, small && { fontSize: 13 }]} numberOfLines={1}>{value}</Text>
+        <Text style={[styles.statLabel, accent && { color: accent.label }]}>{label}</Text>
+        <Text style={[styles.statValue, small && { fontSize: 13 }, accent && { color: accent.value }]} numberOfLines={1}>{value}</Text>
       </View>
     </View>
   );

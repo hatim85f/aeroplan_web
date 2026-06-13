@@ -28,16 +28,17 @@ function getFocStatus(startDate, endDate) {
 }
 
 /* ─── Sub-components ─────────────────────────────────────────────────────── */
-function StatCard({ icon, iconColor, iconBg, label, value, sub }) {
+function StatCard({ icon, accent, label, value, sub }) {
+  const a = accent || colors.accents.blue;
   return (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: iconBg }]}>
-        <Ionicons name={icon} size={20} color={iconColor} />
+    <View style={[styles.statCard, { backgroundColor: a.bg, borderColor: a.border }]}>
+      <View style={[styles.statIcon, { backgroundColor: a.chip }]}>
+        <Ionicons name={icon} size={20} color={colors.white} />
       </View>
       <View style={styles.statBody}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value ?? '—'}</Text>
-        {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
+        <Text style={[styles.statLabel, { color: a.label }]}>{label}</Text>
+        <Text style={[styles.statValue, { color: a.value }]}>{value ?? '—'}</Text>
+        {sub ? <Text style={[styles.statSub, { color: a.label }]}>{sub}</Text> : null}
       </View>
     </View>
   );
@@ -154,21 +155,21 @@ export default function FocOverridesListScreen({
       {/* ── Stats ───────────────────────────────────────────────────────── */}
       <View style={styles.statsRow}>
         <StatCard
-          icon="document-text-outline" iconColor="#0F6FFF" iconBg="#E8F0FF"
+          icon="document-text-outline" accent={colors.accents.blue}
           label="Total Override Docs" value={pagination.total || overrides.length}
         />
         <StatCard
-          icon="checkmark-circle-outline" iconColor="#059669" iconBg="#ECFDF5"
+          icon="checkmark-circle-outline" accent={colors.accents.teal}
           label="Active Now" value={activeCount}
           sub={overrides.length ? `${Math.round(activeCount / overrides.length * 100)}% of listed` : ''}
         />
         <StatCard
-          icon="cube-outline" iconColor="#F97316" iconBg="#FFF3E0"
+          icon="cube-outline" accent={colors.accents.rose}
           label="Products Covered" value={totalProductsCovered}
           sub="Across all overrides"
         />
         <StatCard
-          icon="layers-outline" iconColor="#8B5CF6" iconBg="#F5F0FF"
+          icon="layers-outline" accent={colors.accents.amber}
           label="Pages" value={totalPages}
           sub={`Page ${page} of ${totalPages}`}
         />
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: globalWidth('14%'),
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
     padding: globalWidth('1%'),
