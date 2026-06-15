@@ -545,7 +545,7 @@ export default function SalesOverviewScreen({ navigation, userDetails, appMetada
     (totalRecords === 0 && totalQty === 0 && cifUsd === 0 && wholesaleAed === 0 && retailAed === 0)
   );
 
-  const groupQuantity = (item) => pick(item?.quantity, item?.value, item?.totalQuantity, 0);
+  const groupQuantity = (item) => pick(item?.quantity, item?.totalQuantity, item?.totalQuantityWithFoc, 0);
   const groupValue    = (item) => pick(
     item?.value, item?.totalCalculatedCifUsd,
     item?.totalCalculatedWholesaleAed, item?.totalCalculatedRetailAed, 0,

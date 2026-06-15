@@ -182,6 +182,15 @@ const findColumnForField = (headers, field) => {
       return candidates.some((candidate) => header === candidate || header.includes(candidate));
     });
   }
+  if (field.key === 'quantity') {
+    // Match "Qty", "Sales Quantity", "Units" etc. while never grabbing a FOC/free/bonus column.
+    const candidates = ['quantity', 'qty', 'salesquantity', 'soldquantity', 'quantitysold', 'units', 'unitssold'];
+    return headers.find((h) => {
+      const header = normalizeHeader(h);
+      if (header.includes('foc') || header.includes('free') || header.includes('bonus')) return false;
+      return candidates.includes(header) || header.includes('salesquantity') || header.includes('quantity');
+    });
+  }
   return headers.find((h) => {
     const header = normalizeHeader(h);
     return header === key || header === label || header.includes(key) || header.includes(label);

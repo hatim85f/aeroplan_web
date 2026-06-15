@@ -1,7 +1,7 @@
 // NOTE: This is a template. Have it reviewed by legal counsel and replace the
 // company name, contact email, and governing law to match your business.
-export const APP_VERSION = '1.0.2';
-export const BUILD_NUMBER = '3';
+export const APP_VERSION = '1.0.3';
+export const BUILD_NUMBER = '4';
 export const COPYRIGHT = '© 2026 AeroPlan. All rights reserved.';
 export const LEGAL_UPDATED = 'June 2026';
 export const SUPPORT_EMAIL = 'support@aeroplan.app';
