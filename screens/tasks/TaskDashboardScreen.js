@@ -11,6 +11,7 @@ import { uploadVoiceNote } from '../../store/cloudinary';
 import {
   addAssignees,
   addRecurringCompletion,
+  archiveTask,
   completeStep,
   deleteMessage,
   getAssignableUsers,
@@ -225,6 +226,13 @@ export default function TaskDashboardScreen({ navigation, route, userDetails, ap
     try { await removeAssignee(token, taskId, String(u.userId)); await fetchDashboard(); }
     catch (err) { window.alert(err.message || 'Failed to remove.'); }
   };
+  const handleDelete = async () => {
+    if (!window.confirm('Delete this task for everyone? This cannot be undone.')) return;
+    try {
+      await archiveTask(token, taskId);
+      navigation.goBack();
+    } catch (err) { window.alert(err.message || 'Failed to delete task.'); }
+  };
 
   if (loading) {
     return <AppShell navigation={navigation} userDetails={userDetails} appMetadata={appMetadata} onSignOut={onSignOut} activeRoute="MyTasks"><View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View></AppShell>;
@@ -256,6 +264,12 @@ export default function TaskDashboardScreen({ navigation, route, userDetails, ap
               </View>
             </View>
           </View>
+          {perms.canDelete ? (
+            <Pressable style={styles.deleteBtn} onPress={handleDelete}>
+              <Ionicons name="trash-outline" size={16} color={colors.danger} />
+              <Text style={styles.deleteBtnText}>Delete</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {sum.description ? <Text style={styles.description}>{sum.description}</Text> : null}
@@ -492,6 +506,8 @@ const styles = StyleSheet.create({
   pageHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   headerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1 },
   backBtn: { width: 34, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 34, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.danger, backgroundColor: colors.surface },
+  deleteBtnText: { color: colors.danger, fontWeight: '700', fontSize: 13 },
   pageTitle: { fontSize: 20, fontWeight: '800', color: colors.textPrimary },
   badgeRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 6 },
   badge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
